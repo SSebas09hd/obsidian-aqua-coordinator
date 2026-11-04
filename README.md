@@ -94,8 +94,8 @@ Todo el progreso vive en `data.json` del plugin; se exporta con el comando **Exp
 
 ### Desde el código
 ```bash
-git clone https://github.com/SSebas09hd/Obsidian.git
-cd Obsidian
+git clone https://github.com/SSebas09hd/obsidian-aqua-coordinator.git
+cd obsidian-aqua-coordinator
 npm install
 npm run build        # genera main.js (tsc estricto + esbuild)
 ```
