@@ -6,8 +6,15 @@
  * matriz disciplina × estado, gestión del cambio con Impact Tasks,
  * balance de carga y gamificación "Clean Flow". 100 % local.
  */
-import { Notice, Plugin, TAbstractFile, TFile, normalizePath } from "obsidian";
-import { DEFAULT_DATA, DEFAULT_SETTINGS, VIEW_TYPE_PTAP_DASHBOARD } from "./core/constants";
+import { Notice, Plugin, TAbstractFile, TFile, WorkspaceLeaf, normalizePath } from "obsidian";
+import { DEFAULT_DATA, DEFAULT_SETTINGS, VIEW_TYPE_GUIDE, VIEW_TYPE_PENDING, VIEW_TYPE_PTAP_DASHBOARD } from "./core/constants";
+import { setStages } from "./core/stages";
+import { TaskCollector } from "./core/TaskCollector";
+import type { TreatmentStage } from "./core/types";
+import { TrainEditorModal } from "./ui/TrainEditorModal";
+import type { GuideAction } from "./ui/guideContent";
+import { GuideView } from "./views/GuideView";
+import { PendingTasksView } from "./views/PendingTasksView";
 import { CoordinatorEngine } from "./core/CoordinatorEngine";
 import { DisciplineRegistry } from "./core/DisciplineRegistry";
 import { DossierWriter } from "./core/DossierWriter";
@@ -27,6 +34,7 @@ export default class AquaPurePlugin extends Plugin {
 	engine!: CoordinatorEngine;
 	factory!: NoteFactory;
 	meetings!: MeetingCompiler;
+	tasks!: TaskCollector;
 	private dossiers!: DossierWriter;
 	private meetingsDirty = false;
 	private statusEl: HTMLElement | null = null;
@@ -43,6 +51,7 @@ export default class AquaPurePlugin extends Plugin {
 			new Notice("AquaPure: no se pudo leer data.json, se inicia con valores por defecto.");
 		}
 
+		setStages(this.data.settings.treatmentStages);
 		const registry = new DisciplineRegistry();
 		this.index = new VaultIndex(this.app, registry, () => {
 			const st = this.data.settings;
@@ -58,6 +67,7 @@ export default class AquaPurePlugin extends Plugin {
 		this.dossiers = new DossierWriter(this.app, this.index, this.engine, () => this.data.settings);
 		this.factory = new NoteFactory(this.app, this.index, () => this.data.settings);
 		this.meetings = new MeetingCompiler(this.app, this.index, () => this.data.settings);
+		this.tasks = new TaskCollector(this.app, this.index);
 
 		this.index.onDisciplineDiscovered((id) => {
 			if (!this.ready) return;
@@ -67,6 +77,8 @@ export default class AquaPurePlugin extends Plugin {
 		});
 
 		this.registerView(VIEW_TYPE_PTAP_DASHBOARD, (leaf) => new PtapCoordinatorDashboardView(leaf, this));
+		this.registerView(VIEW_TYPE_PENDING, (leaf) => new PendingTasksView(leaf, this));
+		this.registerView(VIEW_TYPE_GUIDE, (leaf) => new GuideView(leaf, this));
 		this.addRibbonIcon("droplets", "Abrir Dashboard del Coordinador PTAP", () => void this.activateDashboard());
 		this.addSettingTab(new AquaPureSettingTab(this.app, this));
 		this.registerCommands();
@@ -127,6 +139,11 @@ export default class AquaPurePlugin extends Plugin {
 		}
 		this.registerVaultEvents();
 		this.scheduleRefresh();
+		if (!this.data.guideShown) {
+			this.data.guideShown = true;
+			this.requestSave();
+			void this.openGuide("inicio");
+		}
 		if (!this.data.templatesInitialized) {
 			this.factory
 				.ensureTemplates()
@@ -193,6 +210,9 @@ export default class AquaPurePlugin extends Plugin {
 				new Notice(`AquaPure: ${this.index.deliverables.size} entregables · ${this.index.stakeholders.size} personas · ${this.index.disciplines.all().length} disciplinas`);
 			}
 		});
+		this.addCommand({ id: "open-pending", name: "Abrir pendientes de entregables", callback: () => void this.openPending() });
+		this.addCommand({ id: "open-guide", name: "Abrir guía de uso", callback: () => void this.openGuide() });
+		this.addCommand({ id: "edit-train", name: "Editar tren de tratamiento", callback: () => new TrainEditorModal(this.app, this).open() });
 		// --- Formularios de creación (v1.1)
 		this.addCommand({ id: "new-person", name: "Nuevo miembro del equipo", callback: () => new NewPersonModal(this.app, this).open() });
 		this.addCommand({ id: "new-discipline", name: "Nueva disciplina", callback: () => new NewDisciplineModal(this.app, this).open() });
@@ -289,6 +309,10 @@ export default class AquaPurePlugin extends Plugin {
 			const view = leaf.view;
 			if (view instanceof PtapCoordinatorDashboardView) view.render();
 		}
+		for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_PENDING)) {
+			const view = leaf.view;
+			if (view instanceof PendingTasksView) view.refresh();
+		}
 	}
 
 	/** Usa el entregable de la nota activa o, si no lo es, abre un buscador. */
@@ -312,6 +336,83 @@ export default class AquaPurePlugin extends Plugin {
 		else new Notice("AquaPure: no se pudo compilar el registro de reuniones.");
 	}
 
+	/** Abre (o enfoca) una vista propia en una pestaña. */
+	private async openView(type: string): Promise<WorkspaceLeaf | null> {
+		try {
+			const { workspace } = this.app;
+			let leaf = workspace.getLeavesOfType(type)[0];
+			if (!leaf) {
+				leaf = workspace.getLeaf("tab");
+				await leaf.setViewState({ type, active: true });
+			}
+			await workspace.revealLeaf(leaf);
+			return leaf;
+		} catch (err) {
+			console.error(`[AquaPure] No se pudo abrir la vista ${type}`, err);
+			new Notice("AquaPure: no se pudo abrir la vista.");
+			return null;
+		}
+	}
+
+	async openPending(): Promise<void> {
+		await this.openView(VIEW_TYPE_PENDING);
+	}
+
+	async openGuide(section?: string): Promise<void> {
+		const leaf = await this.openView(VIEW_TYPE_GUIDE);
+		if (leaf && section && leaf.view instanceof GuideView) {
+			const view = leaf.view;
+			window.setTimeout(() => view.goTo(section), 150);
+		}
+	}
+
+	runGuideAction(action: GuideAction): void {
+		switch (action) {
+			case "new-person":
+				new NewPersonModal(this.app, this).open();
+				break;
+			case "new-discipline":
+				new NewDisciplineModal(this.app, this).open();
+				break;
+			case "new-deliverable":
+				new NewDeliverableModal(this.app, this).open();
+				break;
+			case "new-meeting":
+				this.openMeetingForm();
+				break;
+			case "edit-train":
+				new TrainEditorModal(this.app, this).open();
+				break;
+			case "open-dashboard":
+				void this.activateDashboard();
+				break;
+			case "open-pending":
+				void this.openPending();
+				break;
+			case "create-templates":
+				void this.factory.ensureTemplates().then((n) => new Notice(n ? `AquaPure: ${n} plantilla(s) creada(s).` : "AquaPure: las plantillas ya existen."));
+				break;
+			case "open-settings": {
+				// API no tipada pública: abre los ajustes en la pestaña del plugin.
+				const setting = (this.app as unknown as { setting?: { open: () => void; openTabById: (id: string) => void } }).setting;
+				setting?.open();
+				setting?.openTabById(this.manifest.id);
+				break;
+			}
+		}
+	}
+
+	/** Guarda un nuevo tren de tratamiento y re-indexa para reasociar etapas. */
+	async applyTreatmentStages(stages: TreatmentStage[]): Promise<void> {
+		this.data.settings.treatmentStages = stages;
+		setStages(stages);
+		const sealed = this.data.gamification.sealedStages;
+		this.data.gamification.sealedStages = sealed.filter((id) => stages.some((s) => s.id === id));
+		this.index.fullScan();
+		this.engine.evaluateProjectState(true);
+		await this.saveAndRefresh();
+	}
+
 	isReady(): boolean {
 		return this.ready;
 	}
@@ -327,11 +428,12 @@ export default class AquaPurePlugin extends Plugin {
 		}
 		this.data = {
 			schemaVersion: base.schemaVersion,
-			settings: { ...DEFAULT_SETTINGS, ...(raw.settings ?? {}) },
+			settings: { ...structuredClone(DEFAULT_SETTINGS), ...(raw.settings ?? {}) },
 			snapshots: raw.snapshots ?? {},
 			impactTasks: Array.isArray(raw.impactTasks) ? raw.impactTasks : [],
 			gamification: { ...base.gamification, ...(raw.gamification ?? {}) },
-			templatesInitialized: raw.templatesInitialized ?? false
+			templatesInitialized: raw.templatesInitialized ?? false,
+			guideShown: raw.guideShown ?? false
 		};
 	}
 

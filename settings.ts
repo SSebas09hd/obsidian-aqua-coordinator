@@ -1,5 +1,6 @@
 import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import type AquaPurePlugin from "./main";
+import { TrainEditorModal } from "./ui/TrainEditorModal";
 
 /** Pestaña de ajustes: umbrales de saturación, MOC, disciplinas activas y datos. */
 export class AquaPureSettingTab extends PluginSettingTab {
@@ -42,6 +43,14 @@ export class AquaPureSettingTab extends PluginSettingTab {
 				})
 			);
 		}
+		new Setting(containerEl)
+			.setName("Tren de tratamiento")
+			.setDesc(`${this.plugin.data.settings.treatmentStages.length} etapas: ${this.plugin.data.settings.treatmentStages.map((x) => x.label).join(" → ")}`)
+			.addButton((b) => b.setButtonText("Editar tren").onClick(() => new TrainEditorModal(this.app, this.plugin).open()));
+		new Setting(containerEl)
+			.setName("Guía de uso")
+			.setDesc("Cómo funciona cada panel, el flujo diario y la referencia de propiedades.")
+			.addButton((b) => b.setButtonText("Abrir guía").onClick(() => void this.plugin.openGuide()));
 		new Setting(containerEl)
 			.setName("Plantillas editables")
 			.setDesc("Crea en la carpeta de plantillas las que falten (persona, disciplina, entregable, reunión). Edita su cuerpo a tu gusto; los formularios las usarán.")

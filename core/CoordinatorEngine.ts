@@ -1,4 +1,5 @@
-import { CRITICAL_DOC_TYPES, STATUS_LABELS, TREATMENT_STAGES } from "./constants";
+import { CRITICAL_DOC_TYPES, STATUS_LABELS } from "./constants";
+import { getStages } from "./stages";
 import { Gamification, MaturityResult } from "./Gamification";
 import type {
 	AquaPureData,
@@ -270,7 +271,7 @@ export class CoordinatorEngine {
 		const docs = Array.from(this.index.deliverables.values());
 		const open = this.openImpactTasks();
 		const now = Date.now();
-		return TREATMENT_STAGES.map((st) => {
+		return getStages().map((st) => {
 			const sd = docs.filter((d) => d.stageIds.includes(st.id));
 			const paths = new Set(sd.map((d) => d.path));
 			const impacts = open.filter((t) => paths.has(t.sourcePath) || (t.targetDocPath !== null && paths.has(t.targetDocPath)));

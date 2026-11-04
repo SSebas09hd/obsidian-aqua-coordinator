@@ -1,5 +1,6 @@
 import { App, CachedMetadata, TFile } from "obsidian";
-import { MEETING_TYPE_VALUES, TREATMENT_STAGES } from "./constants";
+import { MEETING_TYPE_VALUES } from "./constants";
+import { getStages } from "./stages";
 import { DisciplineRegistry } from "./DisciplineRegistry";
 import type { DeliverableRecord, InlineTaskRecord, MeetingRecord, StakeholderRecord, TreatmentStageId } from "./types";
 import {
@@ -290,8 +291,18 @@ export class VaultIndex {
 		const ids = new Set<TreatmentStageId>();
 		const match = (text: string): void => {
 			const n = normalize(text).replace(/[_-]/g, " ");
-			for (const st of TREATMENT_STAGES) {
-				if (normalize(st.id).replace(/_/g, " ") === n || st.aliases.some((a) => n.includes(a))) ids.add(st.id);
+			const stages = getStages();
+			// 1) Coincidencia exacta por id o nombre; 2) si no hay, por términos alternativos.
+			const exact = stages.filter((st) => normalize(st.id).replace(/_/g, " ") === n || normalize(st.label) === n);
+			if (exact.length) {
+				exact.forEach((st) => ids.add(st.id));
+				return;
+			}
+			for (const st of stages) {
+				if (st.aliases.some((a) => {
+					const na = normalize(a);
+					return na.length > 2 ? n.includes(na) : n.split(/\W+/).includes(na);
+				})) ids.add(st.id);
 			}
 		};
 		if (explicit.length) explicit.forEach(match);

@@ -510,6 +510,84 @@
 .aquapure-statusbar { cursor: pointer; font-family: var(--aquapure-mono, var(--font-monospace)); }
 .aquapure-statusbar.is-alarm { color: #ef233c; }
 
+/* ---------- Ayuda contextual (v1.2) */
+.aquapure-help {
+	width: 18px; height: 18px; padding: 0; margin-left: 4px;
+	border-radius: 50%; border: 1px solid var(--aquapure-line-strong);
+	background: transparent; color: var(--aquapure-accent);
+	font-size: 10px; font-weight: 700; line-height: 1; box-shadow: none; cursor: pointer;
+}
+.aquapure-panel-title .aquapure-help + .aquapure-controls, .aquapure-panel-title .aquapure-controls { margin-left: auto; }
+.aquapure-help:hover { background: var(--aquapure-accent); color: #04121f; }
+
+/* ---------- Editor del tren */
+.aquapure-train-editor { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+.aquapure-train-row {
+	display: grid; grid-template-columns: 32px 1fr auto; gap: 8px; align-items: center;
+	padding: 6px 8px; border: 1px solid var(--aquapure-line); border-radius: var(--aquapure-radius);
+	background: var(--aquapure-panel-2);
+	border-left: 3px solid var(--aquapure-accent);
+}
+.aquapure-train-num { color: var(--aquapure-accent); font-weight: 700; }
+.aquapure-train-fields { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.aquapure-train-fields input { width: 100%; }
+.aquapure-train-fields input:first-child { font-weight: 600; }
+.aquapure-train-btns { display: flex; gap: 4px; }
+.aquapure-train-btns button { padding: 4px 6px; height: auto; }
+.aquapure-train-btns button.is-confirm { background: var(--aquapure-alarm); color: #fff; }
+
+/* ---------- Pendientes */
+.aquapure-pending-summary { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+.aquapure-pending-group { margin-bottom: 10px; }
+.aquapure-pending-head { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 0; border-bottom: 1px solid var(--aquapure-line); margin-bottom: 4px; }
+.aquapure-pending-count { color: var(--aquapure-muted); font-size: 11px; }
+.aquapure-pending {
+	display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; align-items: center;
+	padding: 5px 6px; border-radius: var(--aquapure-radius);
+	border-left: 2px solid transparent;
+	transition: background-color 120ms ease;
+}
+.aquapure-pending:hover { background: var(--aquapure-panel-2); }
+.aquapure-pending.is-overdue { border-left-color: var(--aquapure-alarm); }
+.aquapure-check {
+	width: 16px; height: 16px; padding: 0; border-radius: 50%;
+	border: 1.5px solid var(--aquapure-muted); background: transparent; box-shadow: none; cursor: pointer;
+	transition: background-color 120ms ease, border-color 120ms ease;
+}
+.aquapure-check:hover { border-color: var(--aquapure-ok); background: color-mix(in srgb, var(--aquapure-ok) 25%, transparent); }
+.aquapure-check.is-done { background: var(--aquapure-ok); border-color: var(--aquapure-ok); }
+.aquapure-pending-body { min-width: 0; }
+.aquapure-pending-text { color: var(--aquapure-text); text-decoration: none; display: block; overflow-wrap: anywhere; }
+.aquapure-pending-text:hover { color: var(--aquapure-accent); text-decoration: underline; }
+.aquapure-pending-meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: 11px; color: var(--aquapure-muted); align-items: center; margin-top: 2px; }
+.aquapure-more { margin-top: 6px; align-self: flex-start; }
+.aquapure-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+.aquapure-filters input[type="search"] { flex: 1 1 200px; }
+.aquapure-toggle { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--aquapure-muted); cursor: pointer; }
+
+/* ---------- Guía */
+.aquapure-guide { display: grid !important; grid-template-columns: 220px minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 800px) { .aquapure-guide { grid-template-columns: minmax(0, 1fr); } .aquapure-guide-nav { position: static !important; } }
+.aquapure-guide-nav {
+	position: sticky; top: 0;
+	display: flex; flex-direction: column; gap: 2px;
+	background: var(--aquapure-panel); border: 1px solid var(--aquapure-line); border-radius: var(--aquapure-radius); padding: 10px;
+}
+.aquapure-guide-link {
+	display: flex; align-items: center; gap: 8px; width: 100%; height: auto;
+	padding: 5px 6px; background: transparent; border: none; box-shadow: none;
+	color: var(--aquapure-text); text-align: left; font-size: 12px; cursor: pointer; border-radius: 2px;
+}
+.aquapure-guide-link:hover { background: var(--aquapure-panel-2); color: var(--aquapure-accent); }
+.aquapure-guide-link svg { width: 14px; height: 14px; color: var(--aquapure-accent); flex: 0 0 auto; }
+.aquapure-guide-main { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.aquapure-guide-section { scroll-margin-top: 8px; transition: box-shadow 300ms ease; }
+.aquapure-guide-flash { box-shadow: 0 0 0 2px var(--aquapure-accent); }
+.aquapure-guide-body { font-size: 14px; line-height: 1.6; }
+.aquapure-guide-body table { font-size: 12px; }
+.aquapure-guide-body code { color: var(--aquapure-accent); }
+.aquapure-guide-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--aquapure-line); }
+
 /* ---------- Animaciones */
 @keyframes aquapure-flow { from { background-position: 200% 0; } to { background-position: 0 0; } }
 @keyframes aquapure-pulse {

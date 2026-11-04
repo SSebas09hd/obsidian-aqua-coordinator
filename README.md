@@ -12,6 +12,21 @@
 
 ---
 
+## 📘 Guía de uso
+
+**¿Primera vez?** Lee la **[Guía de uso completa](docs/GUIA.md)**: primeros pasos en 10 minutos, conceptos, flujo diario, reuniones, plantillas, tren de tratamiento y solución de problemas.
+
+La misma guía viene **dentro del plugin**: se abre sola la primera vez y luego con el botón **? Guía** del dashboard, los **?** de cada panel (te llevan a la sección correspondiente) o el comando *AquaPure: Abrir guía de uso*.
+
+### En 5 pasos
+1. **Ajusta el tren** de tratamiento: Dashboard → *Editar tren* (convencional, filtración directa, FiME, compacta o a la medida).
+2. **Registra al equipo**: **+ Persona** (la disciplina decide a quién llegan los impactos).
+3. **Crea los entregables**: **+ Entregable** (código automático, impactos, dependencias y firmas).
+4. **Registra reuniones**: **+ Reunión**. Las acciones con responsable entran a su carga.
+5. **Trabaja desde el dashboard**: emite revisiones, firma, despeja impactos y cierra pendientes con botones.
+
+> **Regla de oro:** crea con formularios y cambia con botones. Así el historial, las firmas y los impactos quedan consistentes sin escribir YAML.
+
 ## Qué hace
 
 | Módulo | Función |
@@ -21,6 +36,8 @@
 | **Gestión del cambio (MOC)** | Cuando un entregable cambia de revisión o de estado (ej. `Rev A - Revisión Interna` → `Rev B - Aprobado con Comentarios`), genera **revisiones pendientes por impacto** para cada disciplina de `impacts:` y para cada documento que declare `depends_on:` hacia él, asignadas a las personas de esa disciplina. |
 | **Carga de trabajo** | Suma entregables asignados, tareas en línea `- [ ]` que enlazan a la persona e impactos abiertos, contra su `capacity_hours`. Indicador Baja / Óptima / Sobrecarga con umbrales configurables. |
 | **Clean Flow** | XP técnica, racha Cero Rework, Velocity de aprobación y 5 niveles de madurez de la PTAP. |
+| **Tren editable** | Etapas configurables por proyecto (renombrar, reordenar, agregar, quitar), con configuraciones típicas: convencional, filtración directa, FiME, planta compacta, convencional + lodos. |
+| **Pendientes** | Todas las casillas `- [ ]` de entregables y actas en un panel y una vista con filtros (disciplina, responsable, vencidas). Responsable por enlace en la línea (o heredado del entregable) y fecha con `📅 AAAA-MM-DD`. Se cierran desde el dashboard. |
 | **Disciplinas dinámicas** | 6 disciplinas base + cualquier nota con `type: discipline` o un `discipline: <Nueva>` desconocido se registra sola, sin reiniciar. |
 
 ## Sin YAML a mano (v1.1)
@@ -117,6 +134,9 @@ Las notas de `examples/` son un mini-proyecto PTAP listo para copiar al Vault y 
 
 ## Comandos
 
+- Abrir guía de uso · Abrir pendientes de entregables · Editar tren de tratamiento
+- Nuevo miembro del equipo · Nueva disciplina · Nuevo entregable · Registrar reunión
+- Emitir nueva revisión · Firmar un entregable · Compilar registro de reuniones · Crear / restaurar plantillas
 - Abrir Dashboard del Coordinador PTAP
 - Re-escanear Vault
 - Exportar estadísticas Clean Flow (JSON)
@@ -135,6 +155,12 @@ core/DossierWriter.ts           Expedientes por disciplina (solo archivos propio
 core/NoteFactory.ts             Creación de notas, códigos, revisiones y firmas
 core/MeetingCompiler.ts         Registro de reuniones, decisiones y acciones
 ui/modals.ts                    Formularios (persona, disciplina, entregable, reunión, revisión, firma)
+ui/TrainEditorModal.ts          Editor del tren de tratamiento
+ui/guideContent.ts              Contenido de la guía (fuente única → vista Guía y docs/GUIA.md)
+core/stages.ts                  Tren activo y configuraciones típicas
+core/TaskCollector.ts           Pendientes de entregables y actas
+views/PendingTasksView.ts       Vista de pendientes con filtros
+views/GuideView.ts              Guía integrada
 views/PtapCoordinatorDashboardView.ts
 styles.css                      Estilos .aquapure-* (oscuro SCADA / claro plano técnico)
 theme/PureWater SCADA Blueprint Tema companion para toda la interfaz

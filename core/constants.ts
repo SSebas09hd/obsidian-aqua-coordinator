@@ -1,6 +1,8 @@
 import type { AquaPureData, AquaPureSettings, DisciplineDef, DocStatusCategory, TreatmentStage } from "./types";
 
 export const VIEW_TYPE_PTAP_DASHBOARD = "aquapure-ptap-dashboard";
+export const VIEW_TYPE_PENDING = "aquapure-pending";
+export const VIEW_TYPE_GUIDE = "aquapure-guide";
 
 export const BASE_DISCIPLINES: DisciplineDef[] = [
 	{
@@ -111,7 +113,8 @@ export const DEFAULT_SETTINGS: AquaPureSettings = {
 	meetingsFolder: "Reuniones",
 	templatesFolder: "AquaPure/Plantillas",
 	outputFolder: "AquaPure",
-	autoCompileMeetings: true
+	autoCompileMeetings: true,
+	treatmentStages: TREATMENT_STAGES.map((st) => ({ ...st, aliases: [...st.aliases] }))
 };
 
 /** Abreviatura de disciplina para códigos de entregable. */

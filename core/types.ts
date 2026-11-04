@@ -6,15 +6,8 @@
 /** Categoría normalizada del estado documental. */
 export type DocStatusCategory = "draft" | "review" | "approved" | "ifc" | "blocked";
 
-/** Etapas del tren de tratamiento de la PTAP. */
-export type TreatmentStageId =
-	| "captacion"
-	| "mezcla_rapida"
-	| "floculacion"
-	| "sedimentacion"
-	| "filtracion"
-	| "desinfeccion"
-	| "almacenamiento";
+/** Etapa del tren de tratamiento: configurable por proyecto (ver core/stages.ts). */
+export type TreatmentStageId = string;
 
 export interface TreatmentStage {
 	id: TreatmentStageId;
@@ -158,6 +151,8 @@ export interface AquaPureSettings {
 	/** Carpeta de salidas generadas por el plugin (registro de reuniones, estadísticas). */
 	outputFolder: string;
 	autoCompileMeetings: boolean;
+	/** Tren de tratamiento del proyecto, en orden de flujo. */
+	treatmentStages: TreatmentStage[];
 }
 
 export interface AquaPureData {
@@ -168,4 +163,6 @@ export interface AquaPureData {
 	schemaVersion: number;
 	/** true cuando ya se crearon las plantillas editables la primera vez. */
 	templatesInitialized?: boolean;
+	/** true cuando ya se mostró la guía de bienvenida. */
+	guideShown?: boolean;
 }

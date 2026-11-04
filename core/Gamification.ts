@@ -1,4 +1,5 @@
-import { MATURITY_LEVELS, TREATMENT_STAGES, XP_RULES } from "./constants";
+import { MATURITY_LEVELS, XP_RULES } from "./constants";
+import { getStages } from "./stages";
 import type { DeliverableRecord, GamificationState, ImpactTask, TreatmentStageId, XpReason } from "./types";
 
 export interface MaturityResult {
@@ -55,7 +56,9 @@ export class Gamification {
 		const fApproved = n ? approvedOrIfc / n : 0;
 		const fIfc = n ? ifc / n : 0;
 
-		const l2 = n > 0 && covered.size >= 5 && fApproved >= 0.3;
+		const totalStages = getStages().length;
+		const needed = Math.max(1, Math.ceil(totalStages * 0.7)); // 5 de 7 en la convencional
+		const l2 = n > 0 && covered.size >= needed && fApproved >= 0.3;
 		const l3 = l2 && fApproved >= 0.6 && blocked === 0;
 		const l4 = l3 && fIfc >= 0.9 && openTasks.length === 0;
 		const l5 = l4 && docs.some((d) => d.commissioningCompliant);
@@ -65,8 +68,8 @@ export class Gamification {
 		let nextHint = "Máximo nivel alcanzado: agua tratada cumpliendo norma.";
 		switch (level) {
 			case 1:
-				progressToNext = Math.min(1, (Math.min(covered.size / 5, 1) + Math.min(fApproved / 0.3, 1)) / 2);
-				nextHint = `Cubrir ≥5 etapas del tren (${covered.size}/${TREATMENT_STAGES.length}) y ≥30% aprobado (${Math.round(fApproved * 100)}%).`;
+				progressToNext = Math.min(1, (Math.min(covered.size / needed, 1) + Math.min(fApproved / 0.3, 1)) / 2);
+				nextHint = `Cubrir ≥${needed} etapas del tren (${covered.size}/${totalStages}) y ≥30% aprobado (${Math.round(fApproved * 100)}%).`;
 				break;
 			case 2:
 				progressToNext = Math.min(1, fApproved / 0.6) * (blocked === 0 ? 1 : 0.8);

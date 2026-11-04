@@ -1,5 +1,6 @@
 import { App, ButtonComponent, Modal, Notice, Setting, SuggestModal, TFile } from "obsidian";
-import { DOC_TYPES, MEETING_TYPES, PHASES, ROLES, STATUS_PRESETS, TREATMENT_STAGES } from "../core/constants";
+import { DOC_TYPES, MEETING_TYPES, PHASES, ROLES, STATUS_PRESETS } from "../core/constants";
+import { getStages } from "../core/stages";
 import { ActionInput, NoteFactory } from "../core/NoteFactory";
 import type { DeliverableRecord } from "../core/types";
 import { classifyStatus, isoDate, normalize } from "../core/utils";
@@ -281,7 +282,7 @@ export class NewDeliverableModal extends FormModal {
 		}, { desc: "Se numera solo según los entregables existentes; puedes editarlo." });
 		refreshCode();
 		this.text(form, "Título", "", (v) => (this.title = v.trim()), { placeholder: "Memoria de cálculo del sedimentador de placas" }).focus();
-		this.chips(form, "Etapas del tren", TREATMENT_STAGES.map((s) => ({ value: s.id, label: s.label })), this.stages);
+		this.chips(form, "Etapas del tren", getStages().map((s) => ({ value: s.id, label: s.label })), this.stages);
 		this.dropdown(form, "Fase", PHASES.map((p) => ({ value: p, label: p })), this.phase, (v) => (this.phase = v));
 		this.dropdown(form, "Estado inicial (Rev A)", STATUS_PRESETS.map((s) => ({ value: s.value, label: s.label })), this.status, (v) => (this.status = v));
 		this.chips(form, "Impacta a", this.disciplineOptions(), this.impacts, "Disciplinas que deben revisar cuando cambie su revisión.");

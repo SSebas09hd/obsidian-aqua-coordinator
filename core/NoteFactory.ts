@@ -1,5 +1,6 @@
 import { App, TFile, TFolder, normalizePath, stringifyYaml } from "obsidian";
-import { DISCIPLINE_CODES, DOC_TYPES, TREATMENT_STAGES } from "./constants";
+import { DISCIPLINE_CODES, DOC_TYPES } from "./constants";
+import { stageLabel } from "./stages";
 import type { AquaPureSettings, DeliverableRecord } from "./types";
 import { isoDate, normalize } from "./utils";
 import type { VaultIndex } from "./VaultIndex";
@@ -112,7 +113,7 @@ export class NoteFactory {
 			signatures: [],
 			revision_history: [{ rev: "A", date: isoDate(Date.now()), status: d.status }]
 		};
-		const stages = d.stageIds.map((id) => TREATMENT_STAGES.find((s) => s.id === id)?.label ?? id).join(", ");
+		const stages = d.stageIds.map(stageLabel).join(", ");
 		const body = await this.body("entregable", {
 			title: d.title,
 			code: d.code,

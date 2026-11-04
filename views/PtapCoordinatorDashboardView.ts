@@ -5,6 +5,8 @@ import { Gamification } from "../core/Gamification";
 import type { DeliverableRecord, DisciplineDef, DocStatusCategory, ImpactTask } from "../core/types";
 import { DAY_MS, isoDate } from "../core/utils";
 import type AquaPurePlugin from "../main";
+import { renderPendingList } from "../ui/pendingRenderer";
+import { TrainEditorModal } from "../ui/TrainEditorModal";
 import { IssueRevisionModal, NewDeliverableModal, NewDisciplineModal, NewMeetingModal, NewPersonModal, SignModal } from "../ui/modals";
 
 type Selection = { kind: "stage"; id: string } | { kind: "cell"; disc: string; status: DocStatusCategory } | null;
@@ -64,6 +66,7 @@ export class PtapCoordinatorDashboardView extends ItemView {
 			this.renderMatrix(grid.createDiv({ cls: "aquapure-panel aquapure-span-2" }), disciplines);
 			this.renderImpacts(grid.createDiv({ cls: "aquapure-panel" }), disciplines);
 			this.renderSignatures(grid.createDiv({ cls: "aquapure-panel" }));
+			this.renderPending(grid.createDiv({ cls: "aquapure-panel aquapure-span-2" }));
 			this.renderMeetings(grid.createDiv({ cls: "aquapure-panel" }));
 			this.renderGamification(grid.createDiv({ cls: "aquapure-panel" }));
 			this.renderWorkload(grid.createDiv({ cls: "aquapure-panel aquapure-span-2" }));
@@ -96,6 +99,8 @@ export class PtapCoordinatorDashboardView extends ItemView {
 		this.toolButton(actions, "layers", "Disciplina", () => new NewDisciplineModal(this.app, this.plugin).open());
 		this.toolButton(actions, "file-plus-2", "Entregable", () => new NewDeliverableModal(this.app, this.plugin).open(), true);
 		this.toolButton(actions, "calendar-plus", "Reunión", () => new NewMeetingModal(this.app, this.plugin).open());
+		const guide = actions.createEl("button", { cls: "aquapure-btn", text: "? Guía", attr: { "aria-label": "Abrir guía de uso" } });
+		guide.onclick = (): void => void this.plugin.openGuide();
 		const refresh = actions.createEl("button", { cls: "aquapure-btn", attr: { "aria-label": "Re-escanear Vault" } });
 		setIcon(refresh, "refresh-cw");
 		refresh.onclick = (): void => {
@@ -124,6 +129,11 @@ export class PtapCoordinatorDashboardView extends ItemView {
 	private renderOnboarding(root: HTMLElement): void {
 		const box = root.createDiv({ cls: "aquapure-panel aquapure-onboarding" });
 		box.createDiv({ cls: "aquapure-detail-title", text: "Puesta en marcha del tablero" });
+		const g = box.createDiv({ cls: "aquapure-onboard-step" });
+		g.createSpan({ text: "0. ¿Primera vez? Lee la guía de 10 minutos y ajusta el tren de tratamiento" });
+		const gb = g.createDiv({ cls: "aquapure-row-actions" });
+		gb.createEl("button", { cls: "aquapure-btn", text: "Guía" }).onclick = (): void => void this.plugin.openGuide("primeros-pasos");
+		gb.createEl("button", { cls: "aquapure-btn", text: "Editar tren" }).onclick = (): void => new TrainEditorModal(this.app, this.plugin).open();
 		const steps: Array<[boolean, string, string, () => void]> = [
 			[this.plugin.index.stakeholders.size > 0, "1. Registra al equipo", "Persona", () => new NewPersonModal(this.app, this.plugin).open()],
 			[this.plugin.index.deliverables.size > 0, "2. Crea el primer entregable (código automático)", "Entregable", () => new NewDeliverableModal(this.app, this.plugin).open()],
@@ -142,7 +152,7 @@ export class PtapCoordinatorDashboardView extends ItemView {
 	// ------------------------------------------------------------------ firmas pendientes
 
 	private renderSignatures(panel: HTMLElement): void {
-		this.panelTitle(panel, "Firmas pendientes", "pen-line");
+		this.panelTitle(panel, "Firmas pendientes", "pen-line", "flujo");
 		const docs = Array.from(this.plugin.index.deliverables.values())
 			.map((d) => ({ d, pending: d.requiredSignatures.filter((p) => !d.signatures.includes(p)) }))
 			.filter((x) => x.pending.length > 0 && x.d.status !== "draft")
@@ -169,10 +179,47 @@ export class PtapCoordinatorDashboardView extends ItemView {
 		}
 	}
 
+	// ------------------------------------------------------------------ pendientes (resumen)
+
+	private pendingToken = 0;
+
+	private renderPending(panel: HTMLElement): void {
+		const h = this.panelTitle(panel, "Pendientes de entregables y actas", "list-checks", "pendientes");
+		const all = h.createDiv({ cls: "aquapure-controls" }).createEl("button", { cls: "aquapure-btn", text: "Ver todos y filtrar" });
+		all.onclick = (): void => void this.plugin.openPending();
+		const summary = panel.createDiv({ cls: "aquapure-stats" });
+		const list = panel.createDiv({ cls: "aquapure-pending-summary" });
+		list.createDiv({ cls: "aquapure-empty", text: "Cargando pendientes…" });
+		const token = ++this.pendingToken;
+		void this.plugin.tasks
+			.collect(true)
+			.then((tasks) => {
+				if (token !== this.pendingToken || !list.isConnected) return;
+				const overdue = tasks.filter((t) => t.overdue).length;
+				const noOwner = tasks.filter((t) => !t.owners.length).length;
+				const docs = new Set(tasks.map((t) => t.path)).size;
+				this.stat(summary, "Pendientes", String(tasks.length), `en ${docs} nota(s)`);
+				this.stat(summary, "Vencidos", String(overdue), overdue ? "atender hoy" : "al día");
+				this.stat(summary, "Sin responsable", String(noOwner), noOwner ? "asignar" : "todos asignados");
+				list.empty();
+				const top = tasks.slice(0, 8);
+				renderPendingList(list, this.plugin, top, "none", () => this.render());
+				if (tasks.length > top.length) {
+					const more = list.createEl("button", { cls: "aquapure-btn aquapure-more", text: `Ver los ${tasks.length - top.length} restantes` });
+					more.onclick = (): void => void this.plugin.openPending();
+				}
+			})
+			.catch((err) => {
+				console.error("[AquaPure] Error cargando pendientes", err);
+				list.empty();
+				list.createDiv({ cls: "aquapure-empty aquapure-error", text: "No se pudieron cargar los pendientes." });
+			});
+	}
+
 	// ------------------------------------------------------------------ reuniones
 
 	private renderMeetings(panel: HTMLElement): void {
-		const h = this.panelTitle(panel, "Reuniones y actas", "calendar-days");
+		const h = this.panelTitle(panel, "Reuniones y actas", "calendar-days", "reuniones");
 		const controls = h.createDiv({ cls: "aquapure-controls" });
 		const add = controls.createEl("button", { cls: "aquapure-btn aquapure-btn-primary", text: "+ Acta" });
 		add.onclick = (): void => new NewMeetingModal(this.app, this.plugin).open();
@@ -210,17 +257,26 @@ export class PtapCoordinatorDashboardView extends ItemView {
 		el.createDiv({ cls: "aquapure-kpi-label", text: label });
 	}
 
-	private panelTitle(panel: HTMLElement, text: string, icon: string): HTMLElement {
+	private panelTitle(panel: HTMLElement, text: string, icon: string, guide?: string): HTMLElement {
 		const h = panel.createDiv({ cls: "aquapure-panel-title" });
 		setIcon(h.createSpan(), icon);
 		h.createSpan({ text });
+		if (guide) {
+			const q = h.createEl("button", { cls: "aquapure-help", text: "?", attr: { "aria-label": `Ayuda: ${text}`, title: "Abrir la guía en esta sección" } });
+			q.onclick = (e): void => {
+				e.stopPropagation();
+				void this.plugin.openGuide(guide);
+			};
+		}
 		return h;
 	}
 
 	// ------------------------------------------------------------------ tren de tratamiento
 
 	private renderTrain(panel: HTMLElement): void {
-		this.panelTitle(panel, "Semáforo del tren de tratamiento", "waves");
+		const th = this.panelTitle(panel, "Semáforo del tren de tratamiento", "waves", "tren");
+		const edit = th.createDiv({ cls: "aquapure-controls" }).createEl("button", { cls: "aquapure-btn", text: "Editar tren" });
+		edit.onclick = (): void => new TrainEditorModal(this.app, this.plugin).open();
 		const stages = this.plugin.engine.stageStatuses();
 		const train = panel.createDiv({ cls: "aquapure-train" });
 		stages.forEach((st, i) => {
@@ -255,7 +311,7 @@ export class PtapCoordinatorDashboardView extends ItemView {
 	// ------------------------------------------------------------------ matriz
 
 	private renderMatrix(panel: HTMLElement, disciplines: DisciplineDef[]): void {
-		this.panelTitle(panel, "Matriz disciplinas × estado de entregables", "table-2");
+		this.panelTitle(panel, "Matriz disciplinas × estado de entregables", "table-2", "dashboard");
 		const matrix = this.plugin.engine.matrix(disciplines.map((d) => d.id));
 		const wrap = panel.createDiv({ cls: "aquapure-table-wrap" });
 		const table = wrap.createEl("table", { cls: "aquapure-matrix" });
@@ -331,7 +387,7 @@ export class PtapCoordinatorDashboardView extends ItemView {
 	// ------------------------------------------------------------------ bandeja de impactos
 
 	private renderImpacts(panel: HTMLElement, disciplines: DisciplineDef[]): void {
-		const h = this.panelTitle(panel, "Revisiones pendientes por impacto", "git-pull-request-arrow");
+		const h = this.panelTitle(panel, "Revisiones pendientes por impacto", "git-pull-request-arrow", "conceptos");
 		const controls = h.createDiv({ cls: "aquapure-controls" });
 		const sel = controls.createEl("select", { cls: "dropdown aquapure-select", attr: { "aria-label": "Filtrar por disciplina" } });
 		sel.createEl("option", { text: "Todas", value: "all" });
@@ -405,7 +461,7 @@ export class PtapCoordinatorDashboardView extends ItemView {
 	// ------------------------------------------------------------------ gamificación
 
 	private renderGamification(panel: HTMLElement): void {
-		this.panelTitle(panel, "Clean Flow · Madurez de la PTAP", "trophy");
+		this.panelTitle(panel, "Clean Flow · Madurez de la PTAP", "trophy", "gamificacion");
 		const g = this.plugin.data.gamification;
 		const m = this.plugin.engine.maturity();
 
@@ -455,7 +511,7 @@ export class PtapCoordinatorDashboardView extends ItemView {
 
 	private renderWorkload(panel: HTMLElement): void {
 		const s = this.plugin.data.settings;
-		this.panelTitle(panel, `Carga de trabajo · Baja <${s.lowSaturationPct}% · Sobrecarga >${s.overloadSaturationPct}%`, "users");
+		this.panelTitle(panel, `Carga de trabajo · Baja <${s.lowSaturationPct}% · Sobrecarga >${s.overloadSaturationPct}%`, "users", "dashboard");
 		const rows = this.plugin.engine.workload();
 		if (!rows.length) {
 			panel.createDiv({ cls: "aquapure-empty", text: "No hay personas. Crea notas con `type: stakeholder`." });
