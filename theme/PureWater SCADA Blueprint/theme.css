@@ -1,0 +1,131 @@
+/* ==========================================================================
+   PureWater SCADA Blueprint — tema companion de AquaPure
+   Estética SCADA industrial: azul abisal, paneles de 1px, códigos monoespaciados.
+   (c) Juan Sebastián Herrera Delgado — MIT
+   ========================================================================== */
+
+.theme-dark {
+	--color-base-00: #070d1f;
+	--color-base-05: #0b132b;
+	--color-base-10: #0f1834;
+	--color-base-20: #1c2541;
+	--color-base-25: #212b4b;
+	--color-base-30: #2a3558;
+	--color-base-35: #33406a;
+	--color-base-40: #46557f;
+	--color-base-50: #6b7c9f;
+	--color-base-60: #8fa3bf;
+	--color-base-70: #b6c4d8;
+	--color-base-100: #e6edf7;
+	--color-accent: #00b4d8;
+	--color-accent-1: #22c3e3;
+	--color-accent-2: #48d1ec;
+	--accent-h: 189; --accent-s: 100%; --accent-l: 42%;
+
+	--background-primary: #0b132b;
+	--background-primary-alt: #0f1834;
+	--background-secondary: #1c2541;
+	--background-secondary-alt: #151e3a;
+	--background-modifier-border: rgba(160, 174, 192, 0.18);
+	--background-modifier-border-hover: rgba(0, 180, 216, 0.45);
+	--background-modifier-hover: rgba(0, 180, 216, 0.08);
+	--background-modifier-active-hover: rgba(0, 180, 216, 0.16);
+	--text-normal: #e6edf7;
+	--text-muted: #8fa3bf;
+	--text-faint: #5d6e90;
+	--text-accent: #00b4d8;
+	--text-accent-hover: #48d1ec;
+	--interactive-accent: #00b4d8;
+	--interactive-accent-hover: #22c3e3;
+	--text-on-accent: #04121f;
+	--link-color: #00b4d8;
+	--link-external-color: #3a86ff;
+	--tag-color: #10b981;
+	--tag-background: rgba(16, 185, 129, 0.12);
+	--code-background: #070d1f;
+	--h1-color: #e6edf7; --h2-color: #00b4d8; --h3-color: #7dd3fc; --h4-color: #a0aec0;
+	--checkbox-color: #10b981;
+	--blockquote-border-color: #00b4d8;
+	--hr-color: rgba(0, 180, 216, 0.3);
+}
+
+.theme-light {
+	--background-primary: #f7f9fc;
+	--background-primary-alt: #eef3f9;
+	--background-secondary: #e7edf6;
+	--background-modifier-border: rgba(28, 37, 65, 0.14);
+	--text-normal: #0b132b;
+	--text-muted: #4a5a78;
+	--text-accent: #0077b6;
+	--interactive-accent: #0077b6;
+	--interactive-accent-hover: #0096c7;
+	--link-color: #0077b6;
+	--tag-color: #059669;
+	--h2-color: #0077b6;
+	--checkbox-color: #059669;
+	--blockquote-border-color: #0077b6;
+	--accent-h: 201; --accent-s: 100%; --accent-l: 36%;
+}
+
+body {
+	--radius-s: 2px;
+	--radius-m: 3px;
+	--radius-l: 4px;
+	--font-monospace-theme: "JetBrains Mono", "Cascadia Mono", "Consolas";
+	--heading-spacing: 1.6em;
+	--h1-weight: 700; --h2-weight: 700; --h3-weight: 600;
+	--tab-curve: 0px;
+	--input-shadow: none;
+}
+
+/* Fondo de plano técnico en el área de trabajo (rejilla sutil). */
+.theme-dark .workspace-leaf-content[data-type="markdown"] .view-content {
+	background-image:
+		linear-gradient(rgba(0, 180, 216, 0.035) 1px, transparent 1px),
+		linear-gradient(90deg, rgba(0, 180, 216, 0.035) 1px, transparent 1px);
+	background-size: 32px 32px;
+}
+
+/* Encabezados con marcador de instrumento. */
+.markdown-rendered h1, .HyperMD-header-1 { letter-spacing: 0.03em; text-transform: uppercase; }
+.markdown-rendered h2 { border-bottom: 1px solid var(--background-modifier-border); padding-bottom: 0.2em; }
+.markdown-rendered h2::before { content: "▸ "; color: var(--text-accent); }
+
+/* Pestañas y paneles con bordes de 1px. */
+.workspace-tab-header.is-active { box-shadow: inset 0 2px 0 var(--interactive-accent); }
+.workspace-split.mod-left-split, .workspace-split.mod-right-split { border-color: var(--background-modifier-border); }
+.nav-file-title.is-active { box-shadow: inset 2px 0 0 var(--interactive-accent); }
+
+/* Barra de estado tipo consola. */
+.status-bar {
+	font-family: var(--font-monospace);
+	font-size: 11px;
+	border-top: 1px solid var(--background-modifier-border-hover, var(--background-modifier-border));
+	background: var(--background-secondary);
+}
+
+/* Propiedades (frontmatter) como hoja de datos de instrumento. */
+.metadata-container { border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); padding: 6px 10px; background: var(--background-primary-alt); }
+.metadata-property-key { font-family: var(--font-monospace); font-size: 0.82em; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+
+/* Códigos de entregable en monoespaciada tabular: escribe `PTAP-CIV-DWG-010`. */
+.markdown-rendered code, .cm-inline-code { font-variant-numeric: tabular-nums; color: var(--text-accent); }
+
+/* Estados documentales en etiquetas: #en-revision #ifc #bloqueo */
+.tag[href="#en-revision"], .tag[href="#review"] { color: #f97316; background: rgba(249, 115, 22, 0.14); }
+.tag[href="#ifc"] { color: #2ec4a6; background: rgba(46, 196, 166, 0.14); }
+.tag[href="#bloqueo"], .tag[href="#critico"] { color: #ef233c; background: rgba(239, 35, 60, 0.16); animation: purewater-pulse 1.6s ease-in-out infinite; }
+@keyframes purewater-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+/* Callouts de disciplina: > [!civil], > [!procesos], > [!ic], ... */
+.callout[data-callout="procesos"] { --callout-color: 0, 180, 216; --callout-icon: lucide-flask-conical; }
+.callout[data-callout="civil"] { --callout-color: 224, 169, 109; --callout-icon: lucide-building-2; }
+.callout[data-callout="mecanica"] { --callout-color: 160, 174, 192; --callout-icon: lucide-cog; }
+.callout[data-callout="electrica"] { --callout-color: 245, 158, 11; --callout-icon: lucide-zap; }
+.callout[data-callout="ic"] { --callout-color: 16, 185, 129; --callout-icon: lucide-activity; }
+.callout[data-callout="calidad"] { --callout-color: 58, 134, 255; --callout-icon: lucide-shield-check; }
+.callout[data-callout="bloqueo"] { --callout-color: 239, 35, 60; --callout-icon: lucide-octagon-alert; }
+
+@media (prefers-reduced-motion: reduce) {
+	.tag { animation: none !important; }
+}
