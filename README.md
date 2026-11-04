@@ -23,6 +23,19 @@
 | **Clean Flow** | XP técnica, racha Cero Rework, Velocity de aprobación y 5 niveles de madurez de la PTAP. |
 | **Disciplinas dinámicas** | 6 disciplinas base + cualquier nota con `type: discipline` o un `discipline: <Nueva>` desconocido se registra sola, sin reiniciar. |
 
+## Sin YAML a mano (v1.1)
+
+| Acción | Dónde |
+|---|---|
+| **+ Persona, + Disciplina, + Entregable, + Reunión** | Barra del dashboard y paleta de comandos. Formularios con desplegables y chips que leen el equipo, las disciplinas y los entregables existentes. |
+| **Código automático** | El formulario de entregable numera solo: `PTAP-PRC-PID-002` según los que ya existen (el prefijo `PTAP` se cambia en ajustes). |
+| **Emitir revisión** | Botón en cada entregable del dashboard, clic derecho sobre la nota o comando. Sugiere la siguiente revisión (A→B…, 0 desde IFC), guarda historial en `revision_history`, reinicia firmas y dispara las revisiones por impacto. |
+| **Firmar** | Panel *Firmas pendientes* o clic derecho. |
+| **Reuniones** | Formulario de acta con asistentes, entregables tratados, decisiones y acciones con responsable y fecha. Las acciones entran a la carga de esa persona. |
+| **Registro de reuniones** | `AquaPure/Registro de reuniones.md` se recompila solo: acciones abiertas por responsable (con vencidas), registro de decisiones e índice cronológico. |
+| **Plantillas editables** | `AquaPure/Plantillas/` (persona, disciplina, entregable, reunión). Edita el cuerpo y los formularios lo usarán; el frontmatter siempre lo genera el plugin con `stringifyYaml` / `processFrontMatter`. |
+| **Barra de estado** | Impactos abiertos, vencidos y XP; clic para abrir el dashboard. |
+
 ## Modelo de datos (frontmatter)
 
 ### Persona
@@ -119,6 +132,9 @@ core/DisciplineRegistry.ts      Disciplinas base + auto-descubiertas
 core/CoordinatorEngine.ts       MOC / Impact Tasks, semáforo, matriz, carga
 core/Gamification.ts            XP idempotente, racha, madurez, velocity
 core/DossierWriter.ts           Expedientes por disciplina (solo archivos propios)
+core/NoteFactory.ts             Creación de notas, códigos, revisiones y firmas
+core/MeetingCompiler.ts         Registro de reuniones, decisiones y acciones
+ui/modals.ts                    Formularios (persona, disciplina, entregable, reunión, revisión, firma)
 views/PtapCoordinatorDashboardView.ts
 styles.css                      Estilos .aquapure-* (oscuro SCADA / claro plano técnico)
 theme/PureWater SCADA Blueprint Tema companion para toda la interfaz

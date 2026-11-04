@@ -73,6 +73,19 @@ export interface DeliverableRecord {
 	commissioningCompliant: boolean;
 }
 
+/** Acta de reunión indexada (`type: meeting`). */
+export interface MeetingRecord {
+	path: string;
+	title: string;
+	date: string;
+	meetingType: string;
+	attendees: string[]; // rutas de personas
+	disciplineIds: string[];
+	related: string[]; // rutas de entregables
+	openActions: number;
+	closedActions: number;
+}
+
 /** Tarea en línea (- [ ]) que enlaza a una persona. */
 export interface InlineTaskRecord {
 	path: string;
@@ -135,6 +148,16 @@ export interface AquaPureSettings {
 	dossierFolder: string;
 	showNotices: boolean;
 	excludedFolders: string[];
+	/** Prefijo de proyecto para códigos autogenerados (PTAP-PRC-PID-001). */
+	projectCode: string;
+	peopleFolder: string;
+	disciplinesFolder: string;
+	deliverablesFolder: string;
+	meetingsFolder: string;
+	templatesFolder: string;
+	/** Carpeta de salidas generadas por el plugin (registro de reuniones, estadísticas). */
+	outputFolder: string;
+	autoCompileMeetings: boolean;
 }
 
 export interface AquaPureData {
@@ -143,4 +166,6 @@ export interface AquaPureData {
 	impactTasks: ImpactTask[];
 	gamification: GamificationState;
 	schemaVersion: number;
+	/** true cuando ya se crearon las plantillas editables la primera vez. */
+	templatesInitialized?: boolean;
 }

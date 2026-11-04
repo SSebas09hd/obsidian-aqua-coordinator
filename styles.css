@@ -7,6 +7,7 @@
 /* ---------- Tokens (modo oscuro = consola SCADA; modo claro = plano técnico) */
 .aquapure-root,
 .aquapure-settings,
+.aquapure-modal,
 .aquapure-notice {
 	--aquapure-bg: #0b132b;
 	--aquapure-panel: #1c2541;
@@ -39,6 +40,7 @@
 
 .theme-light .aquapure-root,
 .theme-light .aquapure-settings,
+.theme-light .aquapure-modal,
 .theme-light .aquapure-notice {
 	--aquapure-bg: #eef3f9;
 	--aquapure-panel: #ffffff;
@@ -456,6 +458,57 @@
 .aquapure-notice--xp { border-left-color: var(--aquapure-ic); }
 .aquapure-notice--seal { border-left-color: var(--aquapure-ifc); }
 .aquapure-notice--level { border-left-color: var(--aquapure-calidad); font-weight: 600; }
+
+/* ---------- Barra de herramientas, arranque y acciones por fila (v1.1) */
+.aquapure-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.aquapure-tool { display: inline-flex; align-items: center; gap: 6px; }
+.aquapure-tool-icon svg { width: 14px; height: 14px; }
+.aquapure-onboarding { margin-bottom: 12px; border-style: dashed; border-color: var(--aquapure-line-strong); }
+.aquapure-onboard-step { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0; }
+.aquapure-onboard-step.is-done { color: var(--aquapure-ok); }
+.aquapure-row-actions { display: flex; gap: 4px; margin-left: auto; }
+.aquapure-row-actions .aquapure-btn { padding: 2px 8px; font-size: 11px; }
+
+/* ---------- Reuniones */
+.aquapure-meeting-list { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+.aquapure-meeting {
+	display: flex; align-items: center; gap: 8px;
+	width: 100%; height: auto; padding: 6px 8px;
+	background: var(--aquapure-panel-2);
+	border: 1px solid var(--aquapure-line);
+	border-radius: var(--aquapure-radius);
+	color: var(--aquapure-text);
+	box-shadow: none; text-align: left; cursor: pointer;
+}
+.aquapure-meeting:hover { border-color: var(--aquapure-accent); }
+.aquapure-meeting-date { color: var(--aquapure-muted); font-size: 11px; flex: 0 0 auto; }
+.aquapure-meeting-title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- Formularios (modales) */
+.aquapure-modal { width: min(680px, 94vw); }
+.aquapure-modal .modal-title { font-family: var(--aquapure-mono); text-transform: uppercase; letter-spacing: 0.05em; font-size: 14px; }
+.aquapure-form { max-height: 64vh; overflow-y: auto; padding-right: 4px; }
+.aquapure-form .setting-item { padding: 8px 0; }
+.aquapure-chip-setting { flex-wrap: wrap; }
+.aquapure-chip-setting .setting-item-control { flex: 1 1 100%; justify-content: flex-start; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.aquapure-chip-picker { display: flex; flex-wrap: wrap; gap: 6px; }
+.aquapure-chip-toggle {
+	height: auto; padding: 3px 8px; cursor: pointer; box-shadow: none;
+	background: transparent; opacity: 0.6;
+	transition: opacity 120ms ease, background-color 120ms ease;
+}
+.aquapure-chip-toggle:hover { opacity: 0.9; }
+.aquapure-chip-toggle.is-on { opacity: 1; background: color-mix(in srgb, var(--aquapure-disc) 28%, transparent); font-weight: 600; }
+.aquapure-chip-toggle.is-on::after { content: "✓"; margin-left: 2px; }
+.aquapure-chip-toggle:focus-visible { outline: 2px solid var(--aquapure-accent); outline-offset: 1px; }
+.aquapure-action-rows { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.aquapure-action-row { display: grid; grid-template-columns: 1fr 150px 140px auto; gap: 6px; }
+@media (max-width: 600px) { .aquapure-action-row { grid-template-columns: 1fr 1fr; } }
+.aquapure-form-error { color: var(--aquapure-alarm); min-height: 1.2em; font-size: 12px; margin-top: 6px; }
+
+/* ---------- Barra de estado */
+.aquapure-statusbar { cursor: pointer; font-family: var(--aquapure-mono, var(--font-monospace)); }
+.aquapure-statusbar.is-alarm { color: #ef233c; }
 
 /* ---------- Animaciones */
 @keyframes aquapure-flow { from { background-position: 200% 0; } to { background-position: 0 0; } }

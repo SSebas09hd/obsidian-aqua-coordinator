@@ -1,6 +1,6 @@
 {
   "name": "aqua-pure-coordinator",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "AquaPure: Potable Water Engineering Coordinator — Obsidian plugin for EPC water treatment plant (PTAP) engineering coordination.",
   "main": "main.js",
   "scripts": {

@@ -1,7 +1,7 @@
 import { App, CachedMetadata, TFile } from "obsidian";
-import { TREATMENT_STAGES } from "./constants";
+import { MEETING_TYPE_VALUES, TREATMENT_STAGES } from "./constants";
 import { DisciplineRegistry } from "./DisciplineRegistry";
-import type { DeliverableRecord, InlineTaskRecord, StakeholderRecord, TreatmentStageId } from "./types";
+import type { DeliverableRecord, InlineTaskRecord, MeetingRecord, StakeholderRecord, TreatmentStageId } from "./types";
 import {
 	classifyStatus,
 	normalize,
@@ -25,6 +25,7 @@ export type DeliverableListener = (path: string, prev: DeliverableRecord | null,
 export class VaultIndex {
 	readonly stakeholders = new Map<string, StakeholderRecord>();
 	readonly deliverables = new Map<string, DeliverableRecord>();
+	readonly meetings = new Map<string, MeetingRecord>();
 	/** Tareas abiertas por archivo; se filtran contra `stakeholders` al consultar. */
 	private readonly inlineTasks = new Map<string, InlineTaskRecord[]>();
 	private readonly listeners: DeliverableListener[] = [];
@@ -44,6 +45,7 @@ export class VaultIndex {
 	fullScan(): void {
 		this.stakeholders.clear();
 		this.deliverables.clear();
+		this.meetings.clear();
 		this.inlineTasks.clear();
 		const files = this.app.vault.getMarkdownFiles();
 		// Primera pasada: disciplinas y personas, para que los enlaces resuelvan en la segunda.
@@ -60,6 +62,7 @@ export class VaultIndex {
 		const prev = this.deliverables.get(path) ?? null;
 		this.stakeholders.delete(path);
 		this.deliverables.delete(path);
+		this.meetings.delete(path);
 		this.inlineTasks.delete(path);
 		this.disciplines.releaseFile(path);
 		if (prev) this.emit(path, prev, null);
@@ -69,6 +72,7 @@ export class VaultIndex {
 		const prev = this.deliverables.get(oldPath) ?? null;
 		this.stakeholders.delete(oldPath);
 		this.deliverables.delete(oldPath);
+		this.meetings.delete(oldPath);
 		this.inlineTasks.delete(oldPath);
 		this.disciplines.releaseFile(oldPath);
 		this.safeIndex(file, false, "all");
@@ -126,7 +130,9 @@ export class VaultIndex {
 			if (type === "discipline" || type === "disciplina") {
 				const name = toStringValue(fm["name"]) || toStringValue(fm["discipline"]) || file.basename;
 				const color = toStringValue(fm["color"]) || undefined;
-				const res = this.disciplines.register(name, path, color, name);
+				const short = toStringValue(fm["short"]) || undefined;
+				const aliases = toStringList(fm["aliases_discipline"]);
+				const res = this.disciplines.register(name, path, color, name, short, aliases);
 				if (res.isNew) this.disciplineListeners.forEach((fn) => fn(res.id));
 			}
 
@@ -164,7 +170,28 @@ export class VaultIndex {
 		if (tasks.length) this.inlineTasks.set(path, tasks);
 		else this.inlineTasks.delete(path);
 
-		// 4) Entregable.
+		// 4) Acta de reunión.
+		if (MEETING_TYPE_VALUES.includes(type)) {
+			let open = 0;
+			let closed = 0;
+			for (const li of cache.listItems ?? []) {
+				if (li.task === " ") open++;
+				else if (li.task !== undefined) closed++;
+			}
+			this.meetings.set(path, {
+				path,
+				title: toStringValue(fm["title"]) || file.basename,
+				date: toStringValue(fm["date"]),
+				meetingType: toStringValue(fm["meeting_type"], "Reunión"),
+				attendees: this.resolveLinks(toStringList(fm["attendees"]), path),
+				disciplineIds: toStringList(fm["disciplines"]).map((t) => this.disciplines.resolve(stripWikilink(t))).filter((x): x is string => !!x),
+				related: this.resolveLinks(toStringList(fm["related"]), path),
+				openActions: open,
+				closedActions: closed
+			});
+		} else this.meetings.delete(path);
+
+		// 5) Entregable.
 		const prev = this.deliverables.get(path) ?? null;
 		const isDeliverable =
 			DELIVERABLE_TYPES.includes(type) ||

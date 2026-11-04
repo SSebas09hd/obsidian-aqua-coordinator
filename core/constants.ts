@@ -103,8 +103,67 @@ export const DEFAULT_SETTINGS: AquaPureSettings = {
 	writeDisciplineDossiers: false,
 	dossierFolder: "AquaPure/Expedientes",
 	showNotices: true,
-	excludedFolders: ["AquaPure/Expedientes", "Templates", "Plantillas"]
+	excludedFolders: ["Templates", "Plantillas"],
+	projectCode: "PTAP",
+	peopleFolder: "Personas",
+	disciplinesFolder: "Disciplinas",
+	deliverablesFolder: "Entregables",
+	meetingsFolder: "Reuniones",
+	templatesFolder: "AquaPure/Plantillas",
+	outputFolder: "AquaPure",
+	autoCompileMeetings: true
 };
+
+/** Abreviatura de disciplina para códigos de entregable. */
+export const DISCIPLINE_CODES: Record<string, string> = {
+	procesos: "PRC",
+	civil: "CIV",
+	mecanica: "MEC",
+	electrica: "ELE",
+	ic: "INS",
+	calidad: "CAL"
+};
+
+/** Tipos documentales ofrecidos en el formulario, con su abreviatura de código. */
+export const DOC_TYPES: Array<{ label: string; code: string; critical?: boolean }> = [
+	{ label: "P&ID", code: "PID" },
+	{ label: "PFD", code: "PFD" },
+	{ label: "Plano", code: "DWG" },
+	{ label: "Memoria de Cálculo", code: "MEM", critical: true },
+	{ label: "Hoja de Datos", code: "HDD", critical: true },
+	{ label: "Especificación Técnica", code: "ESP" },
+	{ label: "Lista / Listado", code: "LST" },
+	{ label: "Informe", code: "INF" },
+	{ label: "Filosofía de Control", code: "FDC" },
+	{ label: "Permiso / Trámite", code: "PER" }
+];
+
+export const ROLES = ["Ingeniero", "Revisor", "Líder", "Coordinador", "Especialista", "Dibujante", "Cliente / Interventoría"];
+
+export const PHASES = ["Básica", "Detalle", "Construcción", "Puesta en Marcha"];
+
+/** Estados sugeridos en los formularios (el plugin acepta cualquier texto). */
+export const STATUS_PRESETS: Array<{ label: string; value: string }> = [
+	{ label: "Borrador", value: "Borrador" },
+	{ label: "Revisión interna", value: "Revisión Interna" },
+	{ label: "Emitido para revisión del cliente (IFR)", value: "Emitido para Revisión (IFR)" },
+	{ label: "Aprobado con comentarios", value: "Aprobado con Comentarios" },
+	{ label: "Aprobado", value: "Aprobado" },
+	{ label: "Emitido para construcción (IFC)", value: "IFC - Aprobado para Construcción" },
+	{ label: "Modificación crítica / Bloqueo", value: "Modificación Crítica - Bloqueo" }
+];
+
+export const MEETING_TYPES = [
+	"Coordinación interdisciplinaria",
+	"Revisión de diseño",
+	"Seguimiento semanal",
+	"Reunión con cliente / interventoría",
+	"Visita de obra",
+	"Cierre de matriz de impacto",
+	"Puesta en marcha"
+];
+
+export const MEETING_TYPE_VALUES = ["meeting", "reunion", "reunión", "acta"];
 
 export const DEFAULT_DATA: AquaPureData = {
 	settings: { ...DEFAULT_SETTINGS },

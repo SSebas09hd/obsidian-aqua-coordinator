@@ -1,7 +1,7 @@
 {
   "id": "aqua-pure-coordinator",
   "name": "AquaPure: Potable Water Engineering Coordinator",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "minAppVersion": "1.5.0",
   "description": "Turns your vault into an EPC control room for potable water treatment plant (PTAP) engineering: discipline matrix, change-impact tracking, workload balancing and Clean Flow gamification.",
   "author": "Juan Sebastián Herrera Delgado",

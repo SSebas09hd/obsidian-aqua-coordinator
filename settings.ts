@@ -15,6 +15,57 @@ export class AquaPureSettingTab extends PluginSettingTab {
 
 		containerEl.createEl("h2", { text: "AquaPure · Coordinador PTAP" });
 
+		// ---------------------------------------------------- Proyecto y carpetas
+		containerEl.createEl("h3", { text: "Proyecto, carpetas y plantillas" });
+		new Setting(containerEl)
+			.setName("Código del proyecto")
+			.setDesc("Prefijo de los códigos que generan los formularios: PTAP-PRC-PID-001.")
+			.addText((t) =>
+				t.setValue(s.projectCode).onChange(async (v) => {
+					s.projectCode = v.trim().toUpperCase() || "PTAP";
+					await this.plugin.saveSettingsOnly();
+				})
+			);
+		const folders: Array<[string, "peopleFolder" | "disciplinesFolder" | "deliverablesFolder" | "meetingsFolder" | "templatesFolder" | "outputFolder", string]> = [
+			["Carpeta de personas", "peopleFolder", "Personas"],
+			["Carpeta de disciplinas", "disciplinesFolder", "Disciplinas"],
+			["Carpeta de entregables", "deliverablesFolder", "Entregables"],
+			["Carpeta de actas de reunión", "meetingsFolder", "Reuniones"],
+			["Carpeta de plantillas editables", "templatesFolder", "AquaPure/Plantillas"],
+			["Carpeta de salidas del plugin", "outputFolder", "AquaPure"]
+		];
+		for (const [label, key, fallback] of folders) {
+			new Setting(containerEl).setName(label).addText((t) =>
+				t.setValue(s[key]).onChange(async (v) => {
+					s[key] = v.trim().replace(/\/+$/, "") || fallback;
+					await this.plugin.saveSettingsOnly();
+				})
+			);
+		}
+		new Setting(containerEl)
+			.setName("Plantillas editables")
+			.setDesc("Crea en la carpeta de plantillas las que falten (persona, disciplina, entregable, reunión). Edita su cuerpo a tu gusto; los formularios las usarán.")
+			.addButton((b) =>
+				b.setButtonText("Crear plantillas").onClick(async () => {
+					try {
+						const n = await this.plugin.factory.ensureTemplates();
+						new Notice(n ? `AquaPure: ${n} plantilla(s) creada(s).` : "AquaPure: las plantillas ya existen.");
+					} catch (err) {
+						console.error(err);
+						new Notice("AquaPure: no se pudieron crear las plantillas.");
+					}
+				})
+			);
+		new Setting(containerEl)
+			.setName("Compilar reuniones automáticamente")
+			.setDesc("Mantiene al día «Registro de reuniones» (acciones por responsable, decisiones e índice) cada vez que cambia un acta.")
+			.addToggle((t) =>
+				t.setValue(s.autoCompileMeetings).onChange(async (v) => {
+					s.autoCompileMeetings = v;
+					await this.plugin.saveSettingsOnly();
+				})
+			);
+
 		// ---------------------------------------------------- Carga de trabajo
 		containerEl.createEl("h3", { text: "Saturación de personal" });
 

@@ -5,6 +5,7 @@ import { Gamification } from "../core/Gamification";
 import type { DeliverableRecord, DisciplineDef, DocStatusCategory, ImpactTask } from "../core/types";
 import { DAY_MS, isoDate } from "../core/utils";
 import type AquaPurePlugin from "../main";
+import { IssueRevisionModal, NewDeliverableModal, NewDisciplineModal, NewMeetingModal, NewPersonModal, SignModal } from "../ui/modals";
 
 type Selection = { kind: "stage"; id: string } | { kind: "cell"; disc: string; status: DocStatusCategory } | null;
 
@@ -57,10 +58,13 @@ export class PtapCoordinatorDashboardView extends ItemView {
 			const disciplines = this.plugin.index.disciplines.active(s.disabledDisciplineIds);
 
 			this.renderHeader(root);
+			if (!this.plugin.index.deliverables.size || !this.plugin.index.stakeholders.size) this.renderOnboarding(root);
 			const grid = root.createDiv({ cls: "aquapure-grid" });
 			this.renderTrain(grid.createDiv({ cls: "aquapure-panel aquapure-span-2" }));
 			this.renderMatrix(grid.createDiv({ cls: "aquapure-panel aquapure-span-2" }), disciplines);
 			this.renderImpacts(grid.createDiv({ cls: "aquapure-panel" }), disciplines);
+			this.renderSignatures(grid.createDiv({ cls: "aquapure-panel" }));
+			this.renderMeetings(grid.createDiv({ cls: "aquapure-panel" }));
 			this.renderGamification(grid.createDiv({ cls: "aquapure-panel" }));
 			this.renderWorkload(grid.createDiv({ cls: "aquapure-panel aquapure-span-2" }));
 		} catch (err) {
@@ -88,6 +92,10 @@ export class PtapCoordinatorDashboardView extends ItemView {
 		t.createDiv({ cls: "aquapure-title-sub", text: `PureWater SCADA Blueprint · ${isoDate(Date.now())}` });
 
 		const actions = head.createDiv({ cls: "aquapure-actions" });
+		this.toolButton(actions, "user-plus", "Persona", () => new NewPersonModal(this.app, this.plugin).open());
+		this.toolButton(actions, "layers", "Disciplina", () => new NewDisciplineModal(this.app, this.plugin).open());
+		this.toolButton(actions, "file-plus-2", "Entregable", () => new NewDeliverableModal(this.app, this.plugin).open(), true);
+		this.toolButton(actions, "calendar-plus", "Reunión", () => new NewMeetingModal(this.app, this.plugin).open());
 		const refresh = actions.createEl("button", { cls: "aquapure-btn", attr: { "aria-label": "Re-escanear Vault" } });
 		setIcon(refresh, "refresh-cw");
 		refresh.onclick = (): void => {
@@ -103,6 +111,96 @@ export class PtapCoordinatorDashboardView extends ItemView {
 		this.kpi(kpis, "Vencidos", String(overdue), "alarm-clock", overdue ? "alarm" : "ok");
 		this.kpi(kpis, "Velocity", vel === null ? "—" : `${vel.toFixed(1)} d`, "gauge");
 		this.kpi(kpis, "XP Técnica", String(g.xp), "zap", "accent");
+	}
+
+	private toolButton(parent: HTMLElement, icon: string, label: string, onClick: () => void, primary = false): void {
+		const b = parent.createEl("button", { cls: `aquapure-btn aquapure-tool${primary ? " aquapure-btn-primary" : ""}`, attr: { "aria-label": `Nuevo: ${label}` } });
+		setIcon(b.createSpan({ cls: "aquapure-tool-icon" }), icon);
+		b.createSpan({ text: label });
+		b.onclick = onClick;
+	}
+
+	/** Guía de arranque cuando el Vault aún está vacío. */
+	private renderOnboarding(root: HTMLElement): void {
+		const box = root.createDiv({ cls: "aquapure-panel aquapure-onboarding" });
+		box.createDiv({ cls: "aquapure-detail-title", text: "Puesta en marcha del tablero" });
+		const steps: Array<[boolean, string, string, () => void]> = [
+			[this.plugin.index.stakeholders.size > 0, "1. Registra al equipo", "Persona", () => new NewPersonModal(this.app, this.plugin).open()],
+			[this.plugin.index.deliverables.size > 0, "2. Crea el primer entregable (código automático)", "Entregable", () => new NewDeliverableModal(this.app, this.plugin).open()],
+			[this.plugin.index.meetings.size > 0, "3. Registra la reunión de arranque", "Reunión", () => new NewMeetingModal(this.app, this.plugin).open()]
+		];
+		for (const [done, text, btn, fn] of steps) {
+			const row = box.createDiv({ cls: `aquapure-onboard-step${done ? " is-done" : ""}` });
+			row.createSpan({ text: `${done ? "✓" : "○"} ${text}` });
+			if (!done) {
+				const b = row.createEl("button", { cls: "aquapure-btn", text: `+ ${btn}` });
+				b.onclick = fn;
+			}
+		}
+	}
+
+	// ------------------------------------------------------------------ firmas pendientes
+
+	private renderSignatures(panel: HTMLElement): void {
+		this.panelTitle(panel, "Firmas pendientes", "pen-line");
+		const docs = Array.from(this.plugin.index.deliverables.values())
+			.map((d) => ({ d, pending: d.requiredSignatures.filter((p) => !d.signatures.includes(p)) }))
+			.filter((x) => x.pending.length > 0 && x.d.status !== "draft")
+			.sort((a, b) => (a.d.due ?? "9999").localeCompare(b.d.due ?? "9999"));
+		if (!docs.length) {
+			panel.createDiv({ cls: "aquapure-empty aquapure-tone-ok", text: "✓ Sin firmas pendientes" });
+			return;
+		}
+		const list = panel.createDiv({ cls: "aquapure-impact-list" });
+		for (const { d, pending } of docs) {
+			const row = list.createDiv({ cls: "aquapure-impact" });
+			const top = row.createDiv({ cls: "aquapure-impact-top" });
+			const code = top.createEl("a", { cls: "aquapure-code aquapure-mono", text: d.code, href: "#" });
+			code.onclick = (e): void => {
+				e.preventDefault();
+				void this.openPath(d.path);
+			};
+			top.createSpan({ cls: `aquapure-pill aquapure-status-${d.status}`, text: `Rev ${d.revision || "—"}` });
+			top.createSpan({ cls: "aquapure-impact-due aquapure-mono", text: `${d.signatures.length}/${d.requiredSignatures.length}` });
+			const foot = row.createDiv({ cls: "aquapure-impact-foot" });
+			foot.createSpan({ cls: "aquapure-assignees", text: `Faltan: ${pending.map((p) => this.plugin.index.stakeholders.get(p)?.name ?? p.replace(/\.md$/, "")).join(", ")}` });
+			const b = foot.createEl("button", { cls: "aquapure-btn aquapure-btn-primary", text: "Firmar" });
+			b.onclick = (): void => new SignModal(this.app, this.plugin, d).open();
+		}
+	}
+
+	// ------------------------------------------------------------------ reuniones
+
+	private renderMeetings(panel: HTMLElement): void {
+		const h = this.panelTitle(panel, "Reuniones y actas", "calendar-days");
+		const controls = h.createDiv({ cls: "aquapure-controls" });
+		const add = controls.createEl("button", { cls: "aquapure-btn aquapure-btn-primary", text: "+ Acta" });
+		add.onclick = (): void => new NewMeetingModal(this.app, this.plugin).open();
+		const reg = controls.createEl("button", { cls: "aquapure-btn", text: "Registro" });
+		reg.setAttr("aria-label", "Compilar y abrir el registro de reuniones");
+		reg.onclick = (): void => void this.plugin.compileAndOpenMeetings();
+
+		const meetings = Array.from(this.plugin.index.meetings.values()).sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+		const open = meetings.reduce((a, m) => a + m.openActions, 0);
+		const closed = meetings.reduce((a, m) => a + m.closedActions, 0);
+		const stats = panel.createDiv({ cls: "aquapure-stats" });
+		this.stat(stats, "Actas", String(meetings.length), "registradas");
+		this.stat(stats, "Acciones abiertas", String(open), "en carga del equipo");
+		this.stat(stats, "Cierre", open + closed ? `${Math.round((closed / (open + closed)) * 100)}%` : "—", `${closed} cerradas`);
+
+		if (!meetings.length) {
+			panel.createDiv({ cls: "aquapure-empty", text: "Registra la primera reunión: las acciones con responsable se suman a su carga y todo se compila en un registro único." });
+			return;
+		}
+		const list = panel.createDiv({ cls: "aquapure-meeting-list" });
+		for (const m of meetings.slice(0, 8)) {
+			const row = list.createEl("button", { cls: "aquapure-meeting" });
+			row.createSpan({ cls: "aquapure-mono aquapure-meeting-date", text: m.date || "s/f" });
+			row.createSpan({ cls: "aquapure-meeting-title", text: m.title });
+			row.createSpan({ cls: "aquapure-chip", text: m.meetingType.split(" ")[0] });
+			if (m.openActions) row.createSpan({ cls: "aquapure-stage-badge", text: `${m.openActions} acc.` });
+			row.onclick = (): void => void this.openPath(m.path);
+		}
 	}
 
 	private kpi(parent: HTMLElement, label: string, value: string, icon: string, tone = ""): void {
@@ -217,6 +315,16 @@ export class PtapCoordinatorDashboardView extends ItemView {
 			row.createSpan({ cls: "aquapure-doc-title", text: d.title });
 			row.createSpan({ cls: `aquapure-pill aquapure-status-${d.status}`, text: d.revision ? `Rev ${d.revision} · ${STATUS_LABELS[d.status]}` : STATUS_LABELS[d.status] });
 			if (d.unresolvedImpacts.length) row.createSpan({ cls: "aquapure-hint", text: `impacts sin resolver: ${d.unresolvedImpacts.join(", ")}` });
+			const acts = row.createDiv({ cls: "aquapure-row-actions" });
+			const rev = acts.createEl("button", { cls: "aquapure-btn", text: "Emitir rev.", attr: { "aria-label": `Emitir nueva revisión de ${d.code}` } });
+			rev.onclick = (): void => new IssueRevisionModal(this.app, this.plugin, d).open();
+			const pending = d.requiredSignatures.filter((p) => !d.signatures.includes(p)).length;
+			if (pending) {
+				const sg = acts.createEl("button", { cls: "aquapure-btn", text: `Firmar (${pending})` });
+				sg.onclick = (): void => new SignModal(this.app, this.plugin, d).open();
+			}
+			const mt = acts.createEl("button", { cls: "aquapure-btn", text: "Acta", attr: { "aria-label": `Registrar reunión sobre ${d.code}` } });
+			mt.onclick = (): void => new NewMeetingModal(this.app, this.plugin, { related: [d.path], title: `Revisión ${d.code}` }).open();
 		}
 	}
 

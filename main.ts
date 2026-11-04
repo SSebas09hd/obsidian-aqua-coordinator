@@ -6,22 +6,30 @@
  * matriz disciplina × estado, gestión del cambio con Impact Tasks,
  * balance de carga y gamificación "Clean Flow". 100 % local.
  */
-import { Notice, Plugin, TAbstractFile, TFile, TFolder, normalizePath } from "obsidian";
+import { Notice, Plugin, TAbstractFile, TFile, normalizePath } from "obsidian";
 import { DEFAULT_DATA, DEFAULT_SETTINGS, VIEW_TYPE_PTAP_DASHBOARD } from "./core/constants";
 import { CoordinatorEngine } from "./core/CoordinatorEngine";
 import { DisciplineRegistry } from "./core/DisciplineRegistry";
 import { DossierWriter } from "./core/DossierWriter";
+import { MeetingCompiler } from "./core/MeetingCompiler";
+import { NoteFactory } from "./core/NoteFactory";
 import type { AquaPureData } from "./core/types";
 import { debounceKeyed } from "./core/utils";
 import { VaultIndex } from "./core/VaultIndex";
 import { AquaPureSettingTab } from "./settings";
+import { DeliverablePicker, IssueRevisionModal, NewDeliverableModal, NewDisciplineModal, NewMeetingModal, NewPersonModal, SignModal } from "./ui/modals";
+import type { DeliverableRecord } from "./core/types";
 import { PtapCoordinatorDashboardView } from "./views/PtapCoordinatorDashboardView";
 
 export default class AquaPurePlugin extends Plugin {
 	data: AquaPureData = structuredClone(DEFAULT_DATA);
 	index!: VaultIndex;
 	engine!: CoordinatorEngine;
+	factory!: NoteFactory;
+	meetings!: MeetingCompiler;
 	private dossiers!: DossierWriter;
+	private meetingsDirty = false;
+	private statusEl: HTMLElement | null = null;
 	private ready = false;
 	private saveTimer: number | null = null;
 	private refreshTimer: number | null = null;
@@ -36,7 +44,11 @@ export default class AquaPurePlugin extends Plugin {
 		}
 
 		const registry = new DisciplineRegistry();
-		this.index = new VaultIndex(this.app, registry, () => this.data.settings.excludedFolders);
+		this.index = new VaultIndex(this.app, registry, () => {
+			const st = this.data.settings;
+			// Las carpetas propias del plugin (plantillas, salidas) nunca se indexan.
+			return [...st.excludedFolders, st.templatesFolder, st.dossierFolder, st.outputFolder];
+		});
 		this.engine = new CoordinatorEngine(
 			this.index,
 			() => this.data,
@@ -44,6 +56,8 @@ export default class AquaPurePlugin extends Plugin {
 			(msg, kind) => this.notify(msg, kind)
 		);
 		this.dossiers = new DossierWriter(this.app, this.index, this.engine, () => this.data.settings);
+		this.factory = new NoteFactory(this.app, this.index, () => this.data.settings);
+		this.meetings = new MeetingCompiler(this.app, this.index, () => this.data.settings);
 
 		this.index.onDisciplineDiscovered((id) => {
 			if (!this.ready) return;
@@ -56,11 +70,17 @@ export default class AquaPurePlugin extends Plugin {
 		this.addRibbonIcon("droplets", "Abrir Dashboard del Coordinador PTAP", () => void this.activateDashboard());
 		this.addSettingTab(new AquaPureSettingTab(this.app, this));
 		this.registerCommands();
+		this.registerFileMenu();
+		this.statusEl = this.addStatusBarItem();
+		this.statusEl.addClass("aquapure-statusbar");
+		this.statusEl.onclick = (): void => void this.activateDashboard();
 
 		// Re-indexado por archivo con debounce: un guardado continuo no satura el hilo principal.
 		this.reindexQueue = debounceKeyed((path) => {
 			const f = this.app.vault.getAbstractFileByPath(path);
+			const wasMeeting = this.index.meetings.has(path);
 			if (f instanceof TFile) this.index.indexFile(f);
+			if (wasMeeting || this.index.meetings.has(path)) this.meetingsDirty = true;
 			this.scheduleRefresh();
 		}, 400);
 
@@ -107,6 +127,15 @@ export default class AquaPurePlugin extends Plugin {
 		}
 		this.registerVaultEvents();
 		this.scheduleRefresh();
+		if (!this.data.templatesInitialized) {
+			this.factory
+				.ensureTemplates()
+				.then(() => {
+					this.data.templatesInitialized = true;
+					this.requestSave();
+				})
+				.catch((err) => console.error("[AquaPure] No se pudieron crear las plantillas", err));
+		}
 	}
 
 	private registerVaultEvents(): void {
@@ -126,6 +155,7 @@ export default class AquaPurePlugin extends Plugin {
 		this.registerEvent(
 			this.app.vault.on("delete", (f: TAbstractFile) => {
 				if (f instanceof TFile) {
+					if (this.index.meetings.has(f.path)) this.meetingsDirty = true;
 					this.index.removePath(f.path);
 					this.scheduleRefresh();
 				}
@@ -163,6 +193,31 @@ export default class AquaPurePlugin extends Plugin {
 				new Notice(`AquaPure: ${this.index.deliverables.size} entregables · ${this.index.stakeholders.size} personas · ${this.index.disciplines.all().length} disciplinas`);
 			}
 		});
+		// --- Formularios de creación (v1.1)
+		this.addCommand({ id: "new-person", name: "Nuevo miembro del equipo", callback: () => new NewPersonModal(this.app, this).open() });
+		this.addCommand({ id: "new-discipline", name: "Nueva disciplina", callback: () => new NewDisciplineModal(this.app, this).open() });
+		this.addCommand({ id: "new-deliverable", name: "Nuevo entregable", callback: () => new NewDeliverableModal(this.app, this).open() });
+		this.addCommand({ id: "new-meeting", name: "Registrar reunión", callback: () => this.openMeetingForm() });
+		this.addCommand({ id: "issue-revision", name: "Emitir nueva revisión de un entregable", callback: () => this.withDeliverable((d) => new IssueRevisionModal(this.app, this, d).open()) });
+		this.addCommand({ id: "sign-deliverable", name: "Firmar un entregable", callback: () => this.withDeliverable((d) => new SignModal(this.app, this, d).open()) });
+		this.addCommand({
+			id: "compile-meetings",
+			name: "Compilar registro de reuniones",
+			callback: () => void this.compileAndOpenMeetings()
+		});
+		this.addCommand({
+			id: "create-templates",
+			name: "Crear / restaurar plantillas editables",
+			callback: async () => {
+				try {
+					const n = await this.factory.ensureTemplates();
+					new Notice(n ? `AquaPure: ${n} plantilla(s) creada(s) en ${this.data.settings.templatesFolder}` : "AquaPure: las plantillas ya existen.");
+				} catch (err) {
+					console.error(err);
+					new Notice("AquaPure: no se pudieron crear las plantillas.");
+				}
+			}
+		});
 		this.addCommand({ id: "export-stats", name: "Exportar estadísticas Clean Flow (JSON)", callback: () => void this.exportStats() });
 		this.addCommand({
 			id: "write-dossiers",
@@ -195,14 +250,66 @@ export default class AquaPurePlugin extends Plugin {
 			this.refreshTimer = null;
 			this.refreshViews();
 			if (this.data.settings.writeDisciplineDossiers) void this.dossiers.writeAll(false);
+			if (this.meetingsDirty && this.data.settings.autoCompileMeetings) {
+				this.meetingsDirty = false;
+				void this.meetings.compile();
+			}
 		}, 300);
 	}
 
+	/** Clic derecho sobre un entregable: acciones sin abrir el dashboard. */
+	private registerFileMenu(): void {
+		this.registerEvent(
+			this.app.workspace.on("file-menu", (menu, file) => {
+				if (!(file instanceof TFile)) return;
+				const doc = this.index.deliverables.get(file.path);
+				if (!doc) return;
+				menu.addSeparator();
+				menu.addItem((i) => i.setTitle("AquaPure: emitir nueva revisión").setIcon("file-up").onClick(() => new IssueRevisionModal(this.app, this, doc).open()));
+				menu.addItem((i) => i.setTitle("AquaPure: firmar").setIcon("pen-line").onClick(() => new SignModal(this.app, this, doc).open()));
+				menu.addItem((i) =>
+					i.setTitle("AquaPure: registrar reunión sobre este entregable").setIcon("calendar-plus").onClick(() => new NewMeetingModal(this.app, this, { related: [doc.path], title: `Revisión ${doc.code}` }).open())
+				);
+			})
+		);
+	}
+
+	private updateStatusBar(): void {
+		if (!this.statusEl) return;
+		const open = this.engine.openImpactTasks();
+		const overdue = open.filter((t) => t.dueAt < Date.now()).length;
+		this.statusEl.setText(`💧 ${open.length} impactos${overdue ? ` · ⚠ ${overdue} vencidos` : ""} · ${this.data.gamification.xp} XP`);
+		this.statusEl.setAttr("aria-label", "Abrir Dashboard del Coordinador PTAP");
+		this.statusEl.toggleClass("is-alarm", overdue > 0);
+	}
+
 	refreshViews(): void {
+		this.updateStatusBar();
 		for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_PTAP_DASHBOARD)) {
 			const view = leaf.view;
 			if (view instanceof PtapCoordinatorDashboardView) view.render();
 		}
+	}
+
+	/** Usa el entregable de la nota activa o, si no lo es, abre un buscador. */
+	withDeliverable(fn: (d: DeliverableRecord) => void): void {
+		const active = this.app.workspace.getActiveFile();
+		const doc = active ? this.index.deliverables.get(active.path) : undefined;
+		if (doc) fn(doc);
+		else new DeliverablePicker(this.app, this, fn).open();
+	}
+
+	/** Reunión: si la nota activa es un entregable, se pre-carga como tratado. */
+	openMeetingForm(): void {
+		const active = this.app.workspace.getActiveFile();
+		const doc = active ? this.index.deliverables.get(active.path) : undefined;
+		new NewMeetingModal(this.app, this, doc ? { related: [doc.path], title: `Revisión ${doc.code}` } : undefined).open();
+	}
+
+	async compileAndOpenMeetings(): Promise<void> {
+		const f = await this.meetings.compile();
+		if (f) await this.app.workspace.getLeaf("tab").openFile(f);
+		else new Notice("AquaPure: no se pudo compilar el registro de reuniones.");
 	}
 
 	isReady(): boolean {
@@ -223,7 +330,8 @@ export default class AquaPurePlugin extends Plugin {
 			settings: { ...DEFAULT_SETTINGS, ...(raw.settings ?? {}) },
 			snapshots: raw.snapshots ?? {},
 			impactTasks: Array.isArray(raw.impactTasks) ? raw.impactTasks : [],
-			gamification: { ...base.gamification, ...(raw.gamification ?? {}) }
+			gamification: { ...base.gamification, ...(raw.gamification ?? {}) },
+			templatesInitialized: raw.templatesInitialized ?? false
 		};
 	}
 
@@ -257,8 +365,8 @@ export default class AquaPurePlugin extends Plugin {
 
 	async exportStats(): Promise<void> {
 		try {
-			const folder = "AquaPure";
-			if (!(this.app.vault.getAbstractFileByPath(folder) instanceof TFolder)) await this.app.vault.createFolder(folder);
+			const folder = this.data.settings.outputFolder || "AquaPure";
+			await this.factory.ensureFolder(folder);
 			const path = normalizePath(`${folder}/aquapure-stats.json`);
 			const m = this.engine.maturity();
 			const payload = {

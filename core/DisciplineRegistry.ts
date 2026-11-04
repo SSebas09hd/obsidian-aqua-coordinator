@@ -43,21 +43,31 @@ export class DisciplineRegistry {
 	 * Registra (o confirma) una disciplina referenciada por `sourcePath`.
 	 * Devuelve el id y si es nueva para el registro.
 	 */
-	register(term: string, sourcePath: string, color?: string, fullName?: string): { id: string; isNew: boolean } {
+	register(term: string, sourcePath: string, color?: string, fullName?: string, short?: string, aliases: string[] = []): { id: string; isNew: boolean } {
 		const existing = this.resolve(term);
 		if (existing) {
 			this.trackRef(existing, sourcePath);
 			const def = this.discovered.get(existing);
-			if (def && color && def.sourcePath === sourcePath) def.color = color;
+			if (def && (def.sourcePath === sourcePath || fullName)) {
+				// La nota de disciplina (fullName definido) es la fuente de verdad de su presentación.
+				if (fullName) {
+					def.sourcePath = sourcePath;
+					def.name = fullName;
+				}
+				if (color) def.color = color;
+				if (short) def.short = short;
+				if (aliases.length) def.aliases = aliases;
+				this.lookupCache = null;
+			}
 			return { id: existing, isNew: false };
 		}
 		const id = slugify(term) || `disc-${this.discovered.size + 1}`;
 		const def: DisciplineDef = {
 			id,
-			short: term.length > 14 ? term.slice(0, 14) + "…" : term,
+			short: short || (term.length > 14 ? term.slice(0, 14) + "…" : term),
 			name: fullName ?? term,
 			color: color ?? DISCOVERED_PALETTE[this.discovered.size % DISCOVERED_PALETTE.length],
-			aliases: [],
+			aliases,
 			builtIn: false,
 			sourcePath
 		};
