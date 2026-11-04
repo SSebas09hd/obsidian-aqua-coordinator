@@ -94,7 +94,110 @@ body {
 /* Pestañas y paneles con bordes de 1px. */
 .workspace-tab-header.is-active { box-shadow: inset 0 2px 0 var(--interactive-accent); }
 .workspace-split.mod-left-split, .workspace-split.mod-right-split { border-color: var(--background-modifier-border); }
-.nav-file-title.is-active { box-shadow: inset 2px 0 0 var(--interactive-accent); }
+
+
+/* ==========================================================================
+   Explorador de archivos: carpetas en degradado SCADA
+   Cada carpeta de primer nivel define --pw-c1 → --pw-c2; sus subcarpetas y
+   archivos heredan el par (propiedades CSS heredables), así una rama entera
+   comparte familia de color. Las carpetas del plugin tienen color semántico.
+   ========================================================================== */
+
+/* Paleta cíclica (se recalcula si cambia el orden, por eso las conocidas van fijas abajo). */
+.nav-folder.mod-root > .nav-folder-children > .nav-folder:nth-child(6n+1),
+.nav-folder.mod-root > .tree-item-children > .nav-folder:nth-child(6n+1) { --pw-c1: #00b4d8; --pw-c2: #3a86ff; }
+.nav-folder.mod-root > .nav-folder-children > .nav-folder:nth-child(6n+2),
+.nav-folder.mod-root > .tree-item-children > .nav-folder:nth-child(6n+2) { --pw-c1: #10b981; --pw-c2: #00b4d8; }
+.nav-folder.mod-root > .nav-folder-children > .nav-folder:nth-child(6n+3),
+.nav-folder.mod-root > .tree-item-children > .nav-folder:nth-child(6n+3) { --pw-c1: #e0a96d; --pw-c2: #f59e0b; }
+.nav-folder.mod-root > .nav-folder-children > .nav-folder:nth-child(6n+4),
+.nav-folder.mod-root > .tree-item-children > .nav-folder:nth-child(6n+4) { --pw-c1: #3a86ff; --pw-c2: #c084fc; }
+.nav-folder.mod-root > .nav-folder-children > .nav-folder:nth-child(6n+5),
+.nav-folder.mod-root > .tree-item-children > .nav-folder:nth-child(6n+5) { --pw-c1: #f59e0b; --pw-c2: #ef6f6c; }
+.nav-folder.mod-root > .nav-folder-children > .nav-folder:nth-child(6n+6),
+.nav-folder.mod-root > .tree-item-children > .nav-folder:nth-child(6n+6) { --pw-c1: #a0aec0; --pw-c2: #7dd3fc; }
+
+/* Carpetas semánticas de AquaPure (color estable, sin importar el orden).
+   Especificidad mayor que la paleta cíclica para que siempre ganen. */
+.nav-folder.mod-root .nav-folder.nav-folder.nav-folder:has(> .nav-folder-title[data-path="Entregables"]) { --pw-c1: #00b4d8; --pw-c2: #2ec4a6; }
+.nav-folder.mod-root .nav-folder.nav-folder.nav-folder:has(> .nav-folder-title[data-path="Personas"]) { --pw-c1: #10b981; --pw-c2: #a3e635; }
+.nav-folder.mod-root .nav-folder.nav-folder.nav-folder:has(> .nav-folder-title[data-path="Reuniones"]) { --pw-c1: #3a86ff; --pw-c2: #00b4d8; }
+.nav-folder.mod-root .nav-folder.nav-folder.nav-folder:has(> .nav-folder-title[data-path="Disciplinas"]) { --pw-c1: #e0a96d; --pw-c2: #f59e0b; }
+.nav-folder.mod-root .nav-folder.nav-folder.nav-folder:has(> .nav-folder-title[data-path="AquaPure"]) { --pw-c1: #c084fc; --pw-c2: #3a86ff; }
+.nav-folder.mod-root .nav-folder.nav-folder.nav-folder:has(> .nav-folder-title[data-path="Demo"]) { --pw-c1: #a0aec0; --pw-c2: #64748b; }
+
+/* Título de carpeta: banda en degradado + marcador cuadrado tipo instrumento. */
+.nav-folder:not(.mod-root) > .nav-folder-title {
+	--pw-c1-fallback: var(--interactive-accent);
+	background: linear-gradient(90deg,
+		color-mix(in srgb, var(--pw-c1, var(--pw-c1-fallback)) 20%, transparent) 0%,
+		color-mix(in srgb, var(--pw-c2, var(--pw-c1-fallback)) 7%, transparent) 55%,
+		transparent 100%);
+	border-left: 2px solid var(--pw-c1, var(--pw-c1-fallback));
+	border-radius: 0 var(--radius-s) var(--radius-s) 0;
+	margin-bottom: 1px;
+	transition: background-color 120ms ease, filter 120ms ease;
+}
+.nav-folder:not(.mod-root) > .nav-folder-title .nav-folder-title-content { font-weight: 600; }
+.nav-folder:not(.mod-root) > .nav-folder-title .nav-folder-title-content::before {
+	content: "";
+	display: inline-block;
+	width: 9px; height: 9px;
+	margin-right: 7px;
+	vertical-align: 0;
+	border-radius: 2px;
+	background: linear-gradient(135deg, var(--pw-c1, var(--interactive-accent)), var(--pw-c2, var(--interactive-accent)));
+	box-shadow: 0 0 6px color-mix(in srgb, var(--pw-c1, var(--interactive-accent)) 55%, transparent);
+}
+.nav-folder:not(.mod-root) > .nav-folder-title .nav-folder-collapse-indicator,
+.nav-folder:not(.mod-root) > .nav-folder-title .collapse-icon { color: var(--pw-c1, var(--text-muted)); }
+.nav-folder:not(.mod-root) > .nav-folder-title:hover {
+	background: linear-gradient(90deg,
+		color-mix(in srgb, var(--pw-c1, var(--interactive-accent)) 34%, transparent) 0%,
+		color-mix(in srgb, var(--pw-c2, var(--interactive-accent)) 14%, transparent) 70%,
+		transparent 100%);
+	color: var(--text-normal);
+}
+
+/* Subcarpetas: misma familia, más tenue, para leer la jerarquía. */
+.nav-folder:not(.mod-root) .nav-folder > .nav-folder-title {
+	background: linear-gradient(90deg, color-mix(in srgb, var(--pw-c2, var(--interactive-accent)) 12%, transparent), transparent 70%);
+	border-left-color: var(--pw-c2, var(--interactive-accent));
+}
+.nav-folder:not(.mod-root) .nav-folder > .nav-folder-title .nav-folder-title-content { font-weight: 500; }
+.nav-folder:not(.mod-root) .nav-folder > .nav-folder-title .nav-folder-title-content::before { width: 7px; height: 7px; opacity: 0.85; }
+
+/* Guía vertical de la rama: degradado del color de la carpeta a transparente. */
+.nav-folder:not(.mod-root) > .nav-folder-children,
+.nav-folder:not(.mod-root) > .tree-item-children {
+	border-left: none !important;
+	background-image: linear-gradient(180deg, var(--pw-c1, var(--interactive-accent)), var(--pw-c2, var(--interactive-accent)) 60%, transparent);
+	background-size: 1px 100%;
+	background-repeat: no-repeat;
+	background-position: calc(var(--nav-item-children-margin-start, 12px) - 2px) 0;
+}
+
+/* Archivos: hover y archivo activo con el color de su carpeta. */
+.nav-file-title:hover {
+	background: linear-gradient(90deg, color-mix(in srgb, var(--pw-c1, var(--interactive-accent)) 16%, transparent), transparent 80%);
+}
+.nav-file-title.is-active {
+	background: linear-gradient(90deg,
+		color-mix(in srgb, var(--pw-c1, var(--interactive-accent)) 30%, transparent),
+		color-mix(in srgb, var(--pw-c2, var(--interactive-accent)) 10%, transparent) 75%,
+		transparent);
+	box-shadow: inset 2px 0 0 var(--pw-c1, var(--interactive-accent));
+	color: var(--text-normal);
+}
+.nav-folder-title.is-being-dragged-over { background: color-mix(in srgb, var(--pw-c1, var(--interactive-accent)) 40%, transparent) !important; }
+
+/* Modo claro: mismos pares, un poco más de saturación en el texto del título. */
+.theme-light .nav-folder:not(.mod-root) > .nav-folder-title .nav-folder-title-content { color: color-mix(in srgb, var(--pw-c1, var(--text-normal)) 55%, #0b132b); }
+
+/* Desactivar con la clase `pw-plain-folders` en un snippet si se prefiere el explorador neutro. */
+body.pw-plain-folders .nav-folder-title,
+body.pw-plain-folders .nav-file-title { background: none !important; border-left: none !important; }
+body.pw-plain-folders .nav-folder-title-content::before { display: none !important; }
 
 /* Barra de estado tipo consola. */
 .status-bar {

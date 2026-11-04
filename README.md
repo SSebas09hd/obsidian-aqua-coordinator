@@ -120,7 +120,7 @@ Todo el progreso vive en `data.json` del plugin; se exporta con el comando **Exp
 1. Descarga `main.js`, `manifest.json` y `styles.css` de la última [Release](../../releases).
 2. Cópialos en `<tu-vault>/.obsidian/plugins/aqua-pure-coordinator/`.
 3. Obsidian → Ajustes → Complementos de la comunidad → activa **AquaPure**.
-4. Tema opcional: copia la carpeta `theme/PureWater SCADA Blueprint/` en `<tu-vault>/.obsidian/themes/` y selecciónalo en Ajustes → Apariencia.
+4. Tema opcional (incluye explorador de carpetas en degradado: las carpetas del plugin tienen color propio y las subcarpetas heredan el de su carpeta madre): copia la carpeta `theme/PureWater SCADA Blueprint/` en `<tu-vault>/.obsidian/themes/` y selecciónalo en Ajustes → Apariencia.
 
 ### Desde el código
 ```bash
@@ -131,6 +131,15 @@ npm run build        # genera main.js (tsc estricto + esbuild)
 ```
 
 Las notas de `examples/` son un mini-proyecto PTAP listo para copiar al Vault y probar el disparador de cambios: abre el P&ID `PTAP-PRC-PID-001` y cambia `revision: A` → `B`.
+
+## Tema PureWater SCADA Blueprint
+
+<p align="center"><img src="docs/explorador-tema.png" alt="Explorador de archivos con carpetas en degradado, modo oscuro y claro" width="620"></p>
+
+- **Carpetas con color semántico:** Entregables (cian → esmeralda), Personas (verde), Reuniones (cobalto), Disciplinas (ocre), AquaPure (violeta → cobalto).
+- **Resto de carpetas:** paleta cíclica de 6 degradados del tema; subcarpetas y archivos heredan la familia de color de su rama.
+- **Archivo activo y hover** con el degradado de su carpeta.
+- ¿Prefieres un explorador neutro? Crea un snippet CSS con `body { } ` y añade la clase `pw-plain-folders` al body (o usa el plugin Style Settings).
 
 ## Comandos
 
