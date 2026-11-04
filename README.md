@@ -139,7 +139,8 @@ Las notas de `examples/` son un mini-proyecto PTAP listo para copiar al Vault y 
 - **Carpetas con color semántico:** Entregables (cian → esmeralda), Personas (verde), Reuniones (cobalto), Disciplinas (ocre), AquaPure (violeta → cobalto).
 - **Resto de carpetas:** paleta cíclica de 6 degradados del tema; subcarpetas y archivos heredan la familia de color de su rama.
 - **Archivo activo y hover** con el degradado de su carpeta.
-- ¿Prefieres un explorador neutro? Crea un snippet CSS con `body { } ` y añade la clase `pw-plain-folders` al body (o usa el plugin Style Settings).
+- ¿Prefieres un explorador neutro? Activa un snippet CSS (Ajustes → Apariencia → Fragmentos CSS) con:
+  `.nav-folder-title, .nav-file-title { background: none !important; border-left: none !important; } .nav-folder-title-content::before { display: none !important; }`
 
 ## Comandos
 
